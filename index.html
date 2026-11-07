@@ -156,10 +156,13 @@
     <button class="btn btn-start" id="start-btn" onclick="startNavigation()">▶ GPS Drive</button>
   </div>
 
-  <!-- Leaflet JavaScript -->
+  <!-- Leaflet Core JavaScript -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet GPX Plugin for reading standard track files -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/2.1.2/gpx.min.js"></script>
+  
   <script>
-    // Complete Route CARN1 (88.25 km) - Corrected Portadown/Craigavon Local Coordinates
+    // Complete Route CARN1 Unabridged Instruction Schedule (Powered for Voice & Cab Cards)
     const routeCARN1 = [
       { seq: 1, mode: "TRAVEL", street: "LEAVE DEPOT", width: "N/A", dir: "TR", distance: 0.04, totalDist: 0.04, lat: 54.453905, lng: -6.410553 },
       { seq: 2, mode: "TRAVEL", street: "CARN ROAD", width: "N/A", dir: "TR", distance: 0.95, totalDist: 0.99, lat: 54.4545, lng: -6.4120 },
@@ -370,7 +373,7 @@
     ];
 
     let currentIndex = 0;
-    let map, lorryMarker, routeLine;
+    let map, lorryMarker;
     let voiceEnabled = true;
     let simulationInterval = null;
     let preferredVoice = null;
@@ -392,14 +395,30 @@
     function initMap() {
       map = L.map('map', { zoomControl: false }).setView([54.453905, -6.410553], 15);
       
+      // Free OpenStreetMap tiles
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap'
       }).addTo(map);
 
-      const lineCoords = routeCARN1.map(p => [p.lat, p.lng]);
-      routeLine = L.polyline(lineCoords, { color: '#ffcc00', weight: 6, opacity: 0.8 }).addTo(map);
+      // Load official carn1.gpx route file dynamically to trace exact roads
+      new L.GPX('carn1.gpx', {
+        async: true,
+        polyline_options: {
+          color: '#ffcc00', // Gritter Yellow
+          weight: 6,
+          opacity: 0.8
+        },
+        marker_options: {
+          startIcon: null,
+          endIcon: null,
+          wptIcons: {}
+        }
+      }).on('loaded', function(e) {
+        map.fitBounds(e.target.getBounds());
+      }).addTo(map);
 
+      // Live Lorry Marker starting at exact depot coordinate
       lorryMarker = L.marker([54.453905, -6.410553]).addTo(map);
       setTimeout(() => { map.invalidateSize(); }, 300);
     }
@@ -430,6 +449,7 @@
       }
     }
 
+    // Translates all routing abbreviations into full spoken English words
     function getSpokenDirection(dirCode) {
       if (!dirCode) return "";
       let code = dirCode.toUpperCase().trim();
