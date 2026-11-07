@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gritter Hands-Free Navigator - CARN1</title>
+  <title>Gritter Automatic Hands-Free Navigator - CARN1</title>
   <!-- Leaflet CSS for Map Rendering -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
@@ -43,7 +43,7 @@
     /* Hands-Free High Visibility Map */
     #map {
       width: 100%;
-      height: 45vh;
+      height: 50vh;
       border-radius: 10px;
       border: 2px solid #ffcc00;
       background: #222;
@@ -81,10 +81,10 @@
     }
 
     .street-title {
-      font-size: 20px;
+      font-size: 22px;
       font-weight: bold;
       color: #ffffff;
-      margin: 6px 0;
+      margin: 8px 0;
     }
 
     .info-grid {
@@ -96,11 +96,11 @@
       border-radius: 6px;
     }
     .info-box {
-      font-size: 13px;
+      font-size: 14px;
       color: #ccc;
     }
     .info-box div {
-      font-size: 16px;
+      font-size: 18px;
       font-weight: bold;
       color: #ffcc00;
       margin-top: 2px;
@@ -129,7 +129,7 @@
 <body>
 
   <header>
-    <h1>Route CARN1 (88.25 km)[cite: 1]</h1>
+    <h1>Route CARN1 (88.25 km)</h1>
     <div id="gps-status" class="status-badge status-offline">GPS OFF</div>
   </header>
 
@@ -144,7 +144,7 @@
     <div class="info-grid">
       <div class="info-box">Action<div id="dir-text">--</div></div>
       <div class="info-box">Spread Width<div id="width-text">--</div></div>
-      <div class="info-box">Total Dist<div id="dist-text">--</div></div>
+      <div class="info-box">Dist to Next<div id="dist-text">--</div></div>
     </div>
   </div>
 
@@ -156,213 +156,55 @@
   <!-- Leaflet JavaScript -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Complete Route CARN1 (88.25 km) Full Dataset - Pages 1 to 6[cite: 1]
+    // Complete Route CARN1 (88.25 km) Dataset with coordinates
     const routeCARN1 = [
       { seq: 1, mode: "TRAVEL", street: "LEAVE DEPOT", width: "N/A", dir: "TR", distance: 0.04, totalDist: 0.04, lat: 54.4250, lng: -6.4800 },
       { seq: 2, mode: "TRAVEL", street: "CARN ROAD", width: "N/A", dir: "TR", distance: 0.95, totalDist: 0.99, lat: 54.4255, lng: -6.4820 },
       { seq: 12, mode: "TRAVEL", street: "1ST EXIT RAB", width: "N/A", dir: "RAB", distance: 0.01, totalDist: 1.00, lat: 54.4260, lng: -6.4850 },
-      { seq: 13, mode: "SALT", street: "SALT SLIP ROAD", width: 6, dir: "TL", distance: 0.28, totalDist: 1.28, lat: 54.4270, lng: -6.4860 },
-      { seq: 14, mode: "SALT", street: "KERNAN LOOP BETWEEN M12 AND A3", width: 6, dir: "SA", distance: 0.81, totalDist: 2.09, lat: 54.4300, lng: -6.4900 },
-      { seq: 20, mode: "SALT", street: "NORTHWAY/ CENTRAL WAY", width: 7, dir: "TR", distance: 2.11, totalDist: 4.20, lat: 54.4400, lng: -6.5000 },
-      { seq: 27, mode: "SALT", street: "SALT ROUNDABOUT", width: 7, dir: "RAB", distance: 0.12, totalDist: 4.32, lat: 54.4420, lng: -6.5030 },
+      { seq: 13, mode: "SALT", street: "SALT SLIP ROAD", width: "6m", dir: "TL", distance: 0.28, totalDist: 1.28, lat: 54.4270, lng: -6.4860 },
+      { seq: 14, mode: "SALT", street: "KERNAN LOOP BETWEEN M12 AND A3", width: "6m", dir: "SA", distance: 0.81, totalDist: 2.09, lat: 54.4300, lng: -6.4900 },
+      { seq: 20, mode: "SALT", street: "NORTHWAY / CENTRAL WAY", width: "7m", dir: "TR", distance: 2.11, totalDist: 4.20, lat: 54.4400, lng: -6.5000 },
+      { seq: 27, mode: "SALT", street: "SALT ROUNDABOUT", width: "7m", dir: "RAB", distance: 0.12, totalDist: 4.32, lat: 54.4420, lng: -6.5030 },
       { seq: 33, mode: "TRAVEL", street: "EXIT RAB ON A3 CENTRAL WAY TOWARDS LURGAN", width: "N/A", dir: "RAB", distance: 0.03, totalDist: 4.35, lat: 54.4430, lng: -6.5050 },
-      { seq: 35, mode: "SALT", street: "A3 CENTRAL WAY", width: 7, dir: "SA", distance: 0.36, totalDist: 4.71, lat: 54.4450, lng: -6.5100 },
-      { seq: 37, mode: "SALT", street: "SALT ROUNDABOUT 4", width: 7, dir: "RAB", distance: 0.52, totalDist: 5.23, lat: 54.4500, lng: -6.5200 },
+      { seq: 35, mode: "SALT", street: "A3 CENTRAL WAY", width: "7m", dir: "SA", distance: 0.36, totalDist: 4.71, lat: 54.4450, lng: -6.5100 },
+      { seq: 37, mode: "SALT", street: "SALT ROUNDABOUT 4", width: "7m", dir: "RAB", distance: 0.52, totalDist: 5.23, lat: 54.4500, lng: -6.5200 },
       { seq: 44, mode: "TRAVEL", street: "EXIT RAB TOWARDS HIGHFIELD / CRAIGAVON HOSPITAL AREA", width: "N/A", dir: "RAB", distance: 0.33, totalDist: 5.56, lat: 54.4520, lng: -6.5250 },
-      { seq: 48, mode: "SALT", street: "MANDEVILLE ROAD", width: 6, dir: "TL", distance: 0.40, totalDist: 5.96, lat: 54.4550, lng: -6.5300 },
-      { seq: 52, mode: "SALT", street: "SALT ROUNDABOUT 5", width: 6, dir: "RAB", distance: 0.23, totalDist: 6.19, lat: 54.4570, lng: -6.5350 },
+      { seq: 48, mode: "SALT", street: "MANDEVILLE ROAD", width: "6m", dir: "TL", distance: 0.40, totalDist: 5.96, lat: 54.4550, lng: -6.5300 },
+      { seq: 52, mode: "SALT", street: "SALT ROUNDABOUT 5", width: "6m", dir: "RAB", distance: 0.23, totalDist: 6.19, lat: 54.4570, lng: -6.5350 },
       { seq: 58, mode: "TRAVEL", street: "TRAVEL RAB TO A27 PORTADOWN EXIT", width: "N/A", dir: "RAB", distance: 0.08, totalDist: 6.27, lat: 54.4580, lng: -6.5370 },
-      { seq: 60, mode: "SALT", street: "MANDEVILLE ROAD", width: 6, dir: "TL", distance: 0.55, totalDist: 6.81, lat: 54.4600, lng: -6.5450 },
-      { seq: 61, mode: "SALT", street: "SALT ROUNDABOUT 6", width: 6, dir: "RAB", distance: 0.23, totalDist: 7.05, lat: 54.4620, lng: -6.5500 },
+      { seq: 60, mode: "SALT", street: "MANDEVILLE ROAD", width: "6m", dir: "TL", distance: 0.55, totalDist: 6.81, lat: 54.4600, lng: -6.5450 },
+      { seq: 61, mode: "SALT", street: "SALT ROUNDABOUT 6", width: "6m", dir: "RAB", distance: 0.23, totalDist: 7.05, lat: 54.4620, lng: -6.5500 },
       { seq: 67, mode: "TRAVEL", street: "TRAVEL RAB TO A27 PORTADOWN EXIT", width: "N/A", dir: "RAB", distance: 0.08, totalDist: 7.12, lat: 54.4630, lng: -6.5520 },
-      { seq: 68, mode: "SALT", street: "MANDEVILLE ROAD", width: 6, dir: "TL", distance: 0.48, totalDist: 7.60, lat: 54.4650, lng: -6.5600 },
-      { seq: 70, mode: "SALT", street: "SALT ROUNDABOUT 7", width: 6, dir: "RAB", distance: 0.12, totalDist: 7.73, lat: 54.4670, lng: -6.5630 },
+      { seq: 68, mode: "SALT", street: "MANDEVILLE ROAD", width: "6m", dir: "TL", distance: 0.48, totalDist: 7.60, lat: 54.4650, lng: -6.5600 },
+      { seq: 70, mode: "SALT", street: "SALT ROUNDABOUT 7", width: "6m", dir: "RAB", distance: 0.12, totalDist: 7.73, lat: 54.4670, lng: -6.5630 },
       { seq: 76, mode: "TRAVEL", street: "TRAVEL RAB TO A27 PORTADOWN EXIT", width: "N/A", dir: "RAB", distance: 0.04, totalDist: 7.77, lat: 54.4680, lng: -6.5650 },
-      { seq: 78, mode: "SALT", street: "LURGAN ROAD", width: 6, dir: "TL", distance: 0.37, totalDist: 8.14, lat: 54.4700, lng: -6.5700 },
-      { seq: 81, mode: "SALT", street: "SALT HOSPITAL ROUNDABOUT", width: 6, dir: "RAB", distance: 0.06, totalDist: 8.20, lat: 54.4710, lng: -6.5720 },
+      { seq: 78, mode: "SALT", street: "LURGAN ROAD", width: "6m", dir: "TL", distance: 0.37, totalDist: 8.14, lat: 54.4700, lng: -6.5700 },
+      { seq: 81, mode: "SALT", street: "SALT HOSPITAL ROUNDABOUT", width: "6m", dir: "RAB", distance: 0.06, totalDist: 8.20, lat: 54.4710, lng: -6.5720 },
       { seq: 85, mode: "TRAVEL", street: "RETURN LURGAN ROAD A27 TOWARDS CRAIGAVON CENTRE", width: "N/A", dir: "TL", distance: 0.34, totalDist: 8.53, lat: 54.4730, lng: -6.5780 },
-      { seq: 87, mode: "SALT", street: "SALT ROUNDABOUT 7 ON SLIP", width: 6, dir: "SA", distance: 0.03, totalDist: 8.56, lat: 54.4740, lng: -6.5800 },
+      { seq: 87, mode: "SALT", street: "SALT ROUNDABOUT 7 ON SLIP", width: "6m", dir: "SA", distance: 0.03, totalDist: 8.56, lat: 54.4740, lng: -6.5800 },
       { seq: 88, mode: "TRAVEL", street: "2ND EXIT ROUNDABOUT 7", width: "N/A", dir: "RAB", distance: 0.04, totalDist: 8.60, lat: 54.4750, lng: -6.5820 },
-      { seq: 90, mode: "SALT", street: "MANDEVILLE ROAD", width: 6, dir: "TL", distance: 0.49, totalDist: 9.09, lat: 54.4780, lng: -6.5900 },
-      { seq: 91, mode: "TRAVEL", street: "2ND EXIT ROUNDABOUT 6", width: "N/A", dir: "RAB", distance: 0.07, totalDist: 9.16, lat: 54.4790, lng: -6.5920 },
-      { seq: 94, mode: "SALT", street: "MANDEVILLE ROAD", width: 6, dir: "TL", distance: 0.54, totalDist: 9.70, lat: 54.4810, lng: -6.5950 },
-      { seq: 95, mode: "TRAVEL", street: "2ND EXIT ROUNDABOUT 5", width: "N/A", dir: "RAB", distance: 0.08, totalDist: 9.77, lat: 54.4820, lng: -6.5970 },
-      { seq: 97, mode: "SALT", street: "MANDEVILLE ROAD", width: 6, dir: "TL", distance: 0.40, totalDist: 10.18, lat: 54.4850, lng: -6.6000 },
-      { seq: 98, mode: "TRAVEL", street: "1ST EXIT ROUNDABOUT 4", width: "N/A", dir: "RAB", distance: 0.02, totalDist: 10.19, lat: 54.4855, lng: -6.6010 },
-      { seq: 99, mode: "SALT", street: "EXIT RAB ONTO CENTRAL WAY", width: 6, dir: "TL", distance: 0.15, totalDist: 10.34, lat: 54.4870, lng: -6.6030 },
-      { seq: 100, mode: "SALT", street: "HIGHFIELD GROVE", width: 6, dir: "TL", distance: 0.16, totalDist: 10.50, lat: 54.4890, lng: -6.6050 },
-      { seq: 102, mode: "SALT", street: "SALT ROUNDABOUT", width: 6, dir: "RAB", distance: 0.06, totalDist: 10.56, lat: 54.4900, lng: -6.6070 },
-      { seq: 106, mode: "TRAVEL", street: "EXIT RAB TOWARDS LURGAN", width: "N/A", dir: "RAB", distance: 0.03, totalDist: 10.59, lat: 54.4905, lng: -6.6080 },
-      { seq: 108, mode: "SALT", street: "HIGHFIELD GROVE", width: 6, dir: "TL", distance: 0.31, totalDist: 10.91, lat: 54.4920, lng: -6.6120 },
-      { seq: 109, mode: "SALT", street: "HIGHFIELD ROAD", width: 6, dir: "TR", distance: 0.48, totalDist: 11.39, lat: 54.4950, lng: -6.6180 },
-      { seq: 113, mode: "SALT", street: "SALT ROUNDABOUT", width: 6, dir: "RAB", distance: 0.07, totalDist: 11.45, lat: 54.4960, lng: -6.6200 },
-      { seq: 116, mode: "TRAVEL", street: "TRAVEL RAB TO HIGHFIELD NORTH ROAD EXIT", width: "N/A", dir: "RAB", distance: 0.02, totalDist: 11.47, lat: 54.4965, lng: -6.6210 },
-      { seq: 117, mode: "SALT", street: "HIGHFIELD NORTH ROAD", width: 6, dir: "TL", distance: 0.41, totalDist: 11.88, lat: 54.4990, lng: -6.6250 },
-      { seq: 122, mode: "SALT", street: "BALTEAGH ROAD", width: 6, dir: "TR", distance: 0.24, totalDist: 12.12, lat: 54.5010, lng: -6.6280 },
-      { seq: 124, mode: "SALT", street: "SALT AVONLEA CRESENT RAB", width: 6, dir: "RAB", distance: 0.06, totalDist: 12.18, lat: 54.5020, lng: -6.6300 },
-      { seq: 128, mode: "TRAVEL", street: "TRAVEL RAB TOWARDS CIVIC CENTRE EXIT", width: "N/A", dir: "RAB", distance: 0.03, totalDist: 12.20, lat: 54.5025, lng: -6.6310 },
-      { seq: 130, mode: "SALT", street: "BALTEAGH ROAD", width: 6, dir: "TL", distance: 0.53, totalDist: 12.73, lat: 54.5050, lng: -6.6380 },
-      { seq: 136, mode: "SALT", street: "SALT ROUNDABOUT", width: 6, dir: "RAB", distance: 0.06, totalDist: 12.79, lat: 54.5060, lng: -6.6400 },
-      { seq: 140, mode: "TRAVEL", street: "TRAVEL RAB TO LURGAN EXIT", width: "N/A", dir: "RAB", distance: 0.04, totalDist: 12.84, lat: 54.5065, lng: -6.6410 },
-      { seq: 143, mode: "SALT", street: "LAKEVIEW ROAD", width: 6, dir: "TL", distance: 0.72, totalDist: 13.55, lat: 54.5100, lng: -6.6500 },
-      { seq: 152, mode: "TRAVEL", street: "3RD EXIT ROUNDABOUT 4", width: "N/A", dir: "RAB", distance: 0.35, totalDist: 13.90, lat: 54.5120, lng: -6.6550 },
-      { seq: 157, mode: "TRAVEL", street: "CENTRAL WAY TO HIGHFIELD GROVE JUNCTION", width: "N/A", dir: "TL", distance: 0.15, totalDist: 14.05, lat: 54.5130, lng: -6.6580 },
-      { seq: 158, mode: "SALT", street: "CENTRAL WAY", width: 6, dir: "SA", distance: 0.24, totalDist: 14.29, lat: 54.5150, lng: -6.6620 },
-      { seq: 161, mode: "TRAVEL", street: "2ND EXIT RAB", width: "N/A", dir: "RAB", distance: 0.03, totalDist: 14.32, lat: 54.5155, lng: -6.6630 },
-      { seq: 163, mode: "TRAVEL", street: "CENTRAL WAY/ NORTHWAY", width: "N/A", dir: "TL", distance: 2.07, totalDist: 16.39, lat: 54.5250, lng: -6.6800 },
-      { seq: 169, mode: "SALT", street: "M12 TOWARDS BELFAST", width: 6, dir: "TL", distance: 2.94, totalDist: 19.33, lat: 54.5400, lng: -6.7100 },
-      { seq: 181, mode: "SALT", street: "SALT J1 ROUNDABOUT", width: 6, dir: "RAB", distance: 0.17, totalDist: 19.50, lat: 54.5420, lng: -6.7150 },
-      { seq: 188, mode: "TRAVEL", street: "TRAVEL RAB RETURN M12 TOWARDS CRAIGAVON", width: "N/A", dir: "RAB", distance: 0.14, totalDist: 19.64, lat: 54.5430, lng: -6.7180 },
-      { seq: 194, mode: "SALT", street: "M12 TO END OF MOTORWAY", width: 6, dir: "TL", distance: 1.64, totalDist: 21.28, lat: 54.5500, lng: -6.7350 },
-      { seq: 201, mode: "TRAVEL", street: "KERNAN LOOP", width: "N/A", dir: "SA", distance: 1.20, totalDist: 22.48, lat: 54.5550, lng: -6.7500 },
-      { seq: 208, mode: "SALT", street: "NORTHWAY ON SLIP / NORTHWAY TO MILL AVENUE JUNCTION", width: 7, dir: "TL", distance: 2.74, totalDist: 25.22, lat: 54.5700, lng: -6.7800 },
-      { seq: 219, mode: "SALT", street: "NORTHWAY TO MANDEVILLE STREET", width: 6, dir: "SA", distance: 0.45, totalDist: 25.67, lat: 54.5730, lng: -6.7880 },
-      { seq: 225, mode: "SALT", street: "A3 NORTHWAY", width: 5, dir: "SA", distance: 0.44, totalDist: 26.11, lat: 54.5760, lng: -6.7950 },
-      { seq: 232, mode: "SALT", street: "RAMP TO LOUGHGALL ((B77))", width: 5, dir: "TL", distance: 0.25, totalDist: 26.36, lat: 54.5780, lng: -6.8000 },
-      { seq: 234, mode: "TRAVEL", street: "BROWNSTOWN ROAD", width: "N/A", dir: "TR", distance: 0.09, totalDist: 26.46, lat: 54.5785, lng: -6.8020 },
-      { seq: 236, mode: "SALT", street: "RAMP TOWARDS CRAIGAVON", width: 5, dir: "TR", distance: 0.15, totalDist: 26.61, lat: 54.5800, lng: -6.8050 },
-      { seq: 238, mode: "SALT", street: "A3 NORTHWAY", width: 5, dir: "SA", distance: 0.50, totalDist: 27.11, lat: 54.5830, lng: -6.8120 },
-      { seq: 247, mode: "SALT", street: "MANDEVILLE STREET / WEST STREET", width: 5, dir: "TR", distance: 0.30, totalDist: 27.42, lat: 54.5850, lng: -6.8170 },
-      { seq: 252, mode: "SALT", street: "MARKET STREET / HIGH STREET / A27 TOWARDS TANDRAGEE", width: 5, dir: "TL", distance: 0.37, totalDist: 27.79, lat: 54.5880, lng: -6.8220 },
-      { seq: 261, mode: "SALT", street: "TOWARDS TOWN CENTRE - BRIDGE STREET SOUTH / HIGH STREET / MARKET STREET / CHURCH STREET", width: 5, dir: "TR", distance: 0.54, totalDist: 28.33, lat: 54.5920, lng: -6.8300 },
-      { seq: 276, mode: "SALT", street: "MANDEVILLE STREET / WEST STREET", width: 5, dir: "TR", distance: 0.20, totalDist: 28.53, lat: 54.5930, lng: -6.8340 },
-      { seq: 281, mode: "TRAVEL", street: "A3 NORTHWAY", width: "N/A", dir: "TL", distance: 0.12, totalDist: 28.65, lat: 54.5935, lng: -6.8360 },
-      { seq: 283, mode: "SALT", street: "A4 CORCRAIN ROAD / CHARLES STREET", width: 6, dir: "TR", distance: 1.43, totalDist: 30.08, lat: 54.6050, lng: -6.8600 },
-      { seq: 302, mode: "TRAVEL", street: "3RD EXIT RAB", width: "N/A", dir: "RAB", distance: 0.04, totalDist: 30.12, lat: 54.6055, lng: -6.8610 },
-      { seq: 305, mode: "SALT", street: "GARVAGHY ROAD", width: 7, dir: "TL", distance: 0.30, totalDist: 30.42, lat: 54.6080, lng: -6.8650 },
-      { seq: 312, mode: "SALT", street: "BALLYORAN HILL", width: 6, dir: "TR", distance: 0.32, totalDist: 30.74, lat: 54.6110, lng: -6.8700 },
-      { seq: 317, mode: "TRAVEL", street: "A4 CORCRAIN ROAD", width: "N/A", dir: "TL", distance: 0.13, totalDist: 30.86, lat: 54.6115, lng: -6.8720 },
-      { seq: 320, mode: "SALT", street: "OBINS STREET / PARK ROAD", width: 6, dir: "TL", distance: 1.43, totalDist: 32.29, lat: 54.6200, lng: -6.8900 },
-      { seq: 330, mode: "SALT", street: "B28 GARVAGHY ROAD TO BALLYORAN HILL JUNCTION", width: 6, dir: "TL", distance: 1.23, totalDist: 33.52, lat: 54.6280, lng: -6.9100 },
-      { seq: 350, mode: "TRAVEL", street: "B28 GARVAGHY ROAD", width: "N/A", dir: "SA", distance: 0.26, totalDist: 33.78, lat: 54.6300, lng: -6.9150 },
-      { seq: 356, mode: "SALT", street: "SALT RAB ON SLIP", width: 7, dir: "SA", distance: 0.03, totalDist: 33.82, lat: 54.6305, lng: -6.9160 },
-      { seq: 357, mode: "TRAVEL", street: "LOOP RAB EXIT B28 GARVAGHY ROAD", width: "N/A", dir: "RAB", distance: 0.04, totalDist: 33.86, lat: 54.6310, lng: -6.9170 },
-      { seq: 361, mode: "TRAVEL", street: "GARVAGHY ROAD TO PARK ROAD JUNCTION", width: "N/A", dir: "TL", distance: 1.52, totalDist: 35.38, lat: 54.6400, lng: -6.9350 },
-      { seq: 388, mode: "SALT", street: "GARVAGHY ROAD/CASTLE STREET", width: 6, dir: "SA", distance: 0.24, totalDist: 35.63, lat: 54.6420, lng: -6.9400 },
-      { seq: 391, mode: "TRAVEL", street: "A27", width: "N/A", dir: "TL", distance: 0.04, totalDist: 35.67, lat: 54.6425, lng: -6.9410 },
-      { seq: 392, mode: "TRAVEL", street: "A27 TOWARDS TOWN CENTRE", width: "N/A", dir: "TR", distance: 0.05, totalDist: 35.72, lat: 54.6430, lng: -6.9420 },
-      { seq: 393, mode: "TRAVEL", street: "BRIDGE STREET SOUTH", width: "N/A", dir: "SA", distance: 0.10, totalDist: 35.82, lat: 54.6440, lng: -6.9440 },
-      { seq: 395, mode: "SALT", street: "RAILWAY STATION LINK ROAD", width: 6, dir: "TR", distance: 0.05, totalDist: 35.87, lat: 54.6445, lng: -6.9450 },
-      { seq: 396, mode: "TRAVEL", street: "A27", width: "N/A", dir: "SA", distance: 0.12, totalDist: 35.99, lat: 54.6455, lng: -6.9470 },
-      { seq: 399, mode: "SALT", street: "GARVAGHY ROAD TOWARDS RAILWAY STATION", width: 6, dir: "TL", distance: 0.04, totalDist: 36.03, lat: 54.6460, lng: -6.9480 },
-      { seq: 400, mode: "SALT", street: "SALT ROAD TO RAILWAY STATION", width: 5, dir: "TL", distance: 0.38, totalDist: 36.41, lat: 54.6490, lng: -6.9550 },
-      { seq: 401, mode: "TRAVEL", street: "IN STATION CAR PARK TURN WHERE SAFE TO DO SO AND RETURN TO GARVAGHY ROAD JUNCTION", width: "N/A", dir: "TURN", distance: 0.38, totalDist: 36.80, lat: 54.6520, lng: -6.9600 },
-      { seq: 402, mode: "TRAVEL", street: "GARVAGHY ROAD", width: "N/A", dir: "TR", distance: 0.04, totalDist: 36.84, lat: 54.6525, lng: -6.9610 },
-      { seq: 403, mode: "TRAVEL", street: "A27", width: "N/A", dir: "TL", distance: 0.10, totalDist: 36.93, lat: 54.6535, lng: -6.9630 },
-      { seq: 404, mode: "TRAVEL", street: "BRIDGE STREET SOUTH TOWARDS TOWN CENTRE", width: "N/A", dir: "TR", distance: 0.05, totalDist: 36.99, lat: 54.6540, lng: -6.9640 },
-      { seq: 406, mode: "SALT", street: "MEADOW LANE", width: 7, dir: "TL", distance: 0.35, totalDist: 37.34, lat: 54.6570, lng: -6.9700 },
-      { seq: 412, mode: "SALT", street: "PORTMORE STREET", width: 5, dir: "TR", distance: 0.09, totalDist: 37.43, lat: 54.6580, lng: -6.9720 },
-      { seq: 414, mode: "SALT", street: "CLONAVON AVENUE", width: 5, dir: "TL", distance: 0.07, totalDist: 37.50, lat: 54.6590, lng: -6.9730 },
-      { seq: 415, mode: "SALT", street: "CLONAVON AVENUE", width: 5, dir: "TR", distance: 0.16, totalDist: 37.67, lat: 54.6605, lng: -6.9760 },
-      { seq: 416, mode: "TRAVEL", street: "THOMAS STREET", width: "N/A", dir: "TR", distance: 0.08, totalDist: 37.74, lat: 54.6610, lng: -6.9770 },
-      { seq: 418, mode: "SALT", street: "PORTMORE STREET TO CLONAVON AVENUE JUNCTION", width: 5, dir: "TR", distance: 0.14, totalDist: 37.88, lat: 54.6620, lng: -6.9800 },
-      { seq: 420, mode: "TRAVEL", street: "PORTMORE STREET", width: "N/A", dir: "SA", distance: 0.09, totalDist: 37.98, lat: 54.6630, lng: -6.9820 },
-      { seq: 422, mode: "SALT", street: "MEADOW LANE / TAVANAGH AVENUE", width: 6, dir: "TR", distance: 0.56, totalDist: 38.54, lat: 54.6670, lng: -6.9900 },
-      { seq: 425, mode: "SALT", street: "HANOVER STREET", width: 6, dir: "SA", distance: 0.25, totalDist: 38.79, lat: 54.6690, lng: -6.9950 },
-      { seq: 427, mode: "TRAVEL", street: "CHURCH STREET", width: "N/A", dir: "TR", distance: 0.07, totalDist: 38.86, lat: 54.6695, lng: -6.9960 },
-      { seq: 429, mode: "SALT", street: "CARLETON STREET", width: 6, dir: "TR", distance: 0.24, totalDist: 39.10, lat: 54.6710, lng: -7.0000 },
-      { seq: 430, mode: "TRAVEL", street: "THOMAS STREET", width: "N/A", dir: "TL", distance: 0.15, totalDist: 39.25, lat: 54.6720, lng: -7.0030 },
-      { seq: 433, mode: "TRAVEL", street: "PORTMORE STREET", width: "N/A", dir: "TR", distance: 0.10, totalDist: 39.35, lat: 54.6730, lng: -7.0050 },
-      { seq: 434, mode: "SALT", street: "EDWARD STREET", width: 6, dir: "TL", distance: 0.26, totalDist: 39.61, lat: 54.6750, lng: -7.0100 },
-      { seq: 437, mode: "TRAVEL", street: "MARKET STREET/CHURCH STREET TO MANDEVILLE STREET JUNCTION", width: "N/A", dir: "TL", distance: 0.26, totalDist: 39.87, lat: 54.6770, lng: -7.0150 },
-      { seq: 445, mode: "SALT", street: "A27 CHURCH STREET / ARMAGH ROAD", width: 6, dir: "SA", distance: 1.73, totalDist: 41.60, lat: 54.6900, lng: -7.0450 },
-      { seq: 477, mode: "SALT", street: "SALT ROUNDABOUT", width: 6, dir: "RAB", distance: 0.13, totalDist: 41.73, lat: 54.6910, lng: -7.0480 },
-      { seq: 482, mode: "TRAVEL", street: "EXIT RAB ON A3 NORTHWAY TOWARDS CRAIGAVON CENTRE", width: "N/A", dir: "RAB", distance: 0.08, totalDist: 41.81, lat: 54.6915, lng: -7.0490 },
-      { seq: 485, mode: "SALT", street: "NORTHWAY TO ON SLIP", width: 6, dir: "TL", distance: 1.54, totalDist: 43.35, lat: 54.7030, lng: -7.0800 },
-      { seq: 491, mode: "TRAVEL", street: "NORTHWAY/A3", width: "N/A", dir: "SA", distance: 0.50, totalDist: 43.85, lat: 54.7060, lng: -7.0900 },
-      { seq: 500, mode: "TRAVEL", street: "MANDEVILLE STREET", width: "N/A", dir: "TR", distance: 0.05, totalDist: 43.90, lat: 54.7065, lng: -7.0910 },
-      { seq: 501, mode: "SALT", street: "WEST STREET", width: 5, dir: "TR", distance: 0.18, totalDist: 44.08, lat: 54.7080, lng: -7.0950 },
-      { seq: 503, mode: "SALT", street: "JERVIS STREET", width: 5, dir: "TL", distance: 0.48, totalDist: 44.56, lat: 54.7120, lng: -7.1050 },
-      { seq: 507, mode: "TRAVEL", street: "CHURCH STREET TO SPLIT SECTION", width: "N/A", dir: "TL", distance: 0.59, totalDist: 45.15, lat: 54.7170, lng: -7.1180 },
-      { seq: 520, mode: "SALT", street: "CHURCH STREET/MARKET STREET TO WEST STREET JUNCTION", width: 5, dir: "SA", distance: 0.04, totalDist: 45.19, lat: 54.7175, lng: -7.1190 },
-      { seq: 522, mode: "TRAVEL", street: "MARKET STREET", width: "N/A", dir: "SA", distance: 0.04, totalDist: 45.23, lat: 54.7180, lng: -7.1200 },
-      { seq: 523, mode: "SALT", street: "WOODHOUSE STREET", width: 5, dir: "TL", distance: 0.17, totalDist: 45.40, lat: 54.7195, lng: -7.1240 },
-      { seq: 525, mode: "SALT", street: "WOODHOUSE STREET TO PUB ON LEFT", width: 5, dir: "TR", distance: 0.14, totalDist: 45.54, lat: 54.7205, lng: -7.1270 },
-      { seq: 529, mode: "TRAVEL", street: "WOODHOUSE STREET", width: "N/A", dir: "SA", distance: 0.17, totalDist: 45.71, lat: 54.7220, lng: -7.1300 },
-      { seq: 531, mode: "TRAVEL", street: "HIGH STREET/A27", width: "N/A", dir: "TL", distance: 0.21, totalDist: 45.92, lat: 54.7240, lng: -7.1350 },
-      { seq: 536, mode: "SALT", street: "CASTLE STREET TOWARDS BELFAST", width: 5, dir: "TL", distance: 0.04, totalDist: 45.96, lat: 54.7245, lng: -7.1360 },
-      { seq: 537, mode: "SALT", street: "MILL AVENUE", width: 6, dir: "SA", distance: 0.14, totalDist: 46.10, lat: 54.7255, lng: -7.1390 },
-      { seq: 540, mode: "TRAVEL", street: "NORTHWAY TO A4 TRAFFIC LIGHTS", width: "N/A", dir: "TL", distance: 0.57, totalDist: 46.67, lat: 54.7300, lng: -7.1500 },
-      { seq: 547, mode: "TRAVEL", street: "A4 CORCRAIN ROAD", width: "N/A", dir: "TR", distance: 0.06, totalDist: 46.73, lat: 54.7305, lng: -7.1520 },
-      { seq: 548, mode: "TRAVEL", street: "B77 EDGARSTOWN RD / WEST STREET", width: "N/A", dir: "TL", distance: 0.50, totalDist: 47.23, lat: 54.7350, lng: -7.1640 },
-      { seq: 555, mode: "TRAVEL", street: "1ST EXIT RAB", width: "N/A", dir: "RAB", distance: 0.02, totalDist: 47.25, lat: 54.7352, lng: -7.1645 },
-      { seq: 556, mode: "TRAVEL", street: "B78 BROWNSTOWN RD", width: "N/A", dir: "TL", distance: 0.19, totalDist: 47.44, lat: 54.7370, lng: -7.1690 },
-      { seq: 558, mode: "SALT", street: "SLIP ROAD TO RAMP", width: 5, dir: "TL", distance: 0.03, totalDist: 47.47, lat: 54.7373, lng: -7.1698 },
-      { seq: 559, mode: "TRAVEL", street: "RAMP TOWARDS CRAIGAVON", width: "N/A", dir: "TL", distance: 0.13, totalDist: 47.60, lat: 54.7385, lng: -7.1725 },
-      { seq: 560, mode: "TRAVEL", street: "A3 NORTHWAY TO MANDEVILLE STREET JUNCTION", width: "N/A", dir: "SA", distance: 0.50, totalDist: 48.10, lat: 54.7430, lng: -7.1850 },
-      { seq: 569, mode: "SALT", street: "NORTHWAY TO TRAFFIC ISLAND END", width: 6, dir: "SA", distance: 0.45, totalDist: 48.55, lat: 54.7470, lng: -7.1950 },
-      { seq: 574, mode: "SALT", street: "A3 NORTHWAY", width: 7, dir: "SA", distance: 2.71, totalDist: 51.26, lat: 54.7700, lng: -7.2500 },
-      { seq: 585, mode: "TRAVEL", street: "KERNAN LOOP", width: "N/A", dir: "TR", distance: 0.81, totalDist: 52.07, lat: 54.7770, lng: -7.2680 },
-      { seq: 591, mode: "TRAVEL", street: "RAMP TOWARDS SEAGOE", width: "N/A", dir: "TL", distance: 0.29, totalDist: 52.35, lat: 54.7800, lng: -7.2750 },
-      { seq: 592, mode: "TRAVEL", street: "1ST EXIT RAB", width: "N/A", dir: "RAB", distance: 0.01, totalDist: 52.36, lat: 54.7802, lng: -7.2752 },
-      { seq: 593, mode: "TRAVEL", street: "SEAGOE ROAD TO KERNAN ROAD JUNCTION", width: "N/A", dir: "TL", distance: 1.23, totalDist: 53.59, lat: 54.7920, lng: -7.3050 },
-      { seq: 605, mode: "SALT", street: "SEAGOE ROAD", width: 6, dir: "SA", distance: 0.41, totalDist: 54.00, lat: 54.7960, lng: -7.3150 },
-      { seq: 612, mode: "SALT", street: "2ND EXIT MINI RAB TO A3 LINK ROAD", width: 7, dir: "RAB TL", distance: 0.23, totalDist: 54.23, lat: 54.7980, lng: -7.3200 },
-      { seq: 615, mode: "TRAVEL", street: "A3 NORTHWAY", width: "N/A", dir: "TL", distance: 1.39, totalDist: 55.61, lat: 54.8100, lng: -7.3500 },
-      { seq: 621, mode: "SALT", street: "MILL AVENUE", width: 6, dir: "TL", distance: 0.17, totalDist: 55.79, lat: 54.8120, lng: -7.3550 },
-      { seq: 625, mode: "TRAVEL", street: "A27 / BRIDGE STREET FOLLOW SIGNS TOWARDS BANBRIDGE", width: "N/A", dir: "TL", distance: 0.41, totalDist: 56.20, lat: 54.8160, lng: -7.3650 },
-      { seq: 632, mode: "TRAVEL", street: "1ST EXIT MINI RAB TO BRIDGE STREET", width: "N/A", dir: "RAB TL", distance: 0.72, totalDist: 56.91, lat: 54.8230, lng: -7.3820 },
-      { seq: 641, mode: "SALT", street: "SEAGOE ROAD", width: 5, dir: "TL", distance: 0.51, totalDist: 57.43, lat: 54.8280, lng: -7.3950 },
-      { seq: 650, mode: "TRAVEL", street: "2ND EXIT MINI RAB ONTO SEAGOE ROAD", width: "N/A", dir: "RAB TL", distance: 0.25, totalDist: 57.67, lat: 54.8305, lng: -7.4010 },
-      { seq: 655, mode: "SALT", street: "CHUCH ROAD / UPPER CHURCH LANE", width: 5, dir: "TR", distance: 1.02, totalDist: 58.69, lat: 54.8400, lng: -7.4250 },
-      { seq: 667, mode: "SALT", street: "1ST EXIT MINI RAB ONTO KILLYCOMAIN ROAD", width: 5, dir: "RAB TL", distance: 0.09, totalDist: 58.78, lat: 54.8410, lng: -7.4270 },
-      { seq: 669, mode: "SALT", street: "BALLYHANNON ROAD", width: 5, dir: "TR", distance: 1.33, totalDist: 60.12, lat: 54.8530, lng: -7.4600 },
-      { seq: 684, mode: "TRAVEL", street: "B2 DRUMNACANVY ROAD", width: "N/A", dir: "TL", distance: 1.44, totalDist: 61.55, lat: 54.8650, lng: -7.4950 },
-      { seq: 689, mode: "SALT", street: "OLD LURGAN ROAD", width: 6, dir: "TL", distance: 1.00, totalDist: 62.55, lat: 54.8740, lng: -7.5200 },
-      { seq: 691, mode: "SALT", street: "LISNISKY ROAD", width: 6, dir: "TR", distance: 0.89, totalDist: 63.44, lat: 54.8820, lng: -7.5420 },
-      { seq: 696, mode: "TRAVEL", street: "3RD EXIT ROUNDABOUT 7", width: "N/A", dir: "RAB", distance: 0.08, totalDist: 63.52, lat: 54.8830, lng: -7.5440 },
-      { seq: 700, mode: "TRAVEL", street: "MANDEVILLE ROAD", width: "N/A", dir: "TL", distance: 0.49, totalDist: 64.00, lat: 54.8870, lng: -7.5550 },
-      { seq: 701, mode: "TRAVEL", street: "2ND EXIT ROUNDABOUT 6", width: "N/A", dir: "RAB", distance: 0.07, totalDist: 64.07, lat: 54.8877, lng: -7.5570 },
-      { seq: 704, mode: "TRAVEL", street: "MANDEVILLE ROAD", width: "N/A", dir: "TL", distance: 0.54, totalDist: 64.61, lat: 54.8920, lng: -7.5700 },
-      { seq: 705, mode: "TRAVEL", street: "3RD EXIT ROUNDABOUT 5", width: "N/A", dir: "RAB", distance: 0.16, totalDist: 64.77, lat: 54.8935, lng: -7.5740 },
-      { seq: 709, mode: "SALT", street: "KNOCKMENAGH ROAD", width: 6, dir: "TL", distance: 0.15, totalDist: 64.92, lat: 54.8950, lng: -7.5780 },
-      { seq: 710, mode: "SALT", street: "SALT PARKMORE ROUNDABOUT", width: 6, dir: "RAB", distance: 0.14, totalDist: 65.06, lat: 54.8965, lng: -7.5820 },
-      { seq: 713, mode: "TRAVEL", street: "EXIT PARKMORE RAB TOWARDS KNOCKMENAGH", width: "N/A", dir: "RAB", distance: 0.07, totalDist: 65.12, lat: 54.8972, lng: -7.5840 },
-      { seq: 715, mode: "SALT", street: "KNOCKMENAGH ROAD", width: 6, dir: "TL", distance: 1.02, totalDist: 66.14, lat: 54.9060, lng: -7.6100 },
-      { seq: 719, mode: "SALT", street: "SALT KNOCKMENAGH ROUNDABOUT", width: 6, dir: "RAB", distance: 0.13, totalDist: 66.27, lat: 54.9075, lng: -7.6140 },
-      { seq: 722, mode: "TRAVEL", street: "TRAVEL TO BROWNLOW ROAD EXIT", width: "N/A", dir: "RAB", distance: 0.03, totalDist: 66.31, lat: 54.9080, lng: -7.6150 },
-      { seq: 723, mode: "SALT", street: "BROWNLOW ROAD", width: 6, dir: "TL", distance: 0.44, totalDist: 66.75, lat: 54.9120, lng: -7.6260 },
-      { seq: 725, mode: "TRAVEL", street: "3RD EXIT WESTACRES ROUNDABOUT", width: "N/A", dir: "RAB", distance: 0.10, totalDist: 66.86, lat: 54.9130, lng: -7.6290 },
-      { seq: 728, mode: "SALT", street: "MOYRAVERTY WEST ROAD TO BLUESTONE ROAD JUNCTION", width: 6, dir: "TL", distance: 0.47, totalDist: 67.33, lat: 54.9175, lng: -7.6410 },
-      { seq: 731, mode: "TRAVEL", street: "MOYRAVERTY WEST ROAD", width: "N/A", dir: "SA", distance: 0.20, totalDist: 67.53, lat: 54.9195, lng: -7.6460 },
-      { seq: 734, mode: "SALT", street: "OAKVALE / OAKFIELDS / MOYRAVERTY MEADOWS", width: 4, dir: "TL", distance: 0.36, totalDist: 67.89, lat: 54.9230, lng: -7.6550 },
-      { seq: 738, mode: "TRAVEL", street: "TURN AT PRIMARY SCHOOL TURNING CIRCLE RETURN TO MOYRAVERTY WEST RD JUNCTION", width: "N/A", dir: "TURN", distance: 0.36, totalDist: 68.25, lat: 54.9265, lng: -7.6640 },
-      { seq: 742, mode: "TRAVEL", street: "MOYRAVERTY WEST ROAD/ DRUMGASK ROAD", width: "N/A", dir: "TL", distance: 1.11, totalDist: 69.36, lat: 54.9370, lng: -7.6920 },
-      { seq: 748, mode: "SALT", street: "SUGAR ISLAND ROAD", width: 5, dir: "TR", distance: 1.84, totalDist: 71.19, lat: 54.9540, lng: -7.7380 },
-      { seq: 754, mode: "TRAVEL", street: "BLEARY ROAD", width: "N/A", dir: "TL", distance: 0.03, totalDist: 71.22, lat: 54.9543, lng: -7.7390 },
-      { seq: 755, mode: "SALT", street: "CALVERTSTOWN ROAD", width: 5, dir: "TR", distance: 0.76, totalDist: 71.98, lat: 54.9610, lng: -7.7580 },
-      { seq: 761, mode: "TRAVEL", street: "B3 PLANTATION ROAD", width: "N/A", dir: "TL", distance: 0.65, totalDist: 72.63, lat: 54.9670, lng: -7.7750 },
-      { seq: 764, mode: "TRAVEL", street: "DEANS ROAD TO BLEARY ROAD JUNCTION", width: "N/A", dir: "TL", distance: 0.20, totalDist: 72.83, lat: 54.9690, lng: -7.7800 },
-      { seq: 767, mode: "SALT", street: "DEANS ROAD", width: 4, dir: "SA", distance: 1.42, totalDist: 74.25, lat: 54.9830, lng: -7.8150 },
-      { seq: 771, mode: "TRAVEL", street: "SUGAR ISLAND ROAD", width: "N/A", dir: "TR", distance: 0.18, totalDist: 74.43, lat: 54.9850, lng: -7.8200 },
-      { seq: 773, mode: "TRAVEL", street: "DRUMGASK ROAD / MOYRAVERTY WEST ROAD", width: "N/A", dir: "TL", distance: 1.31, totalDist: 75.73, lat: 54.9970, lng: -7.8520 },
-      { seq: 782, mode: "TRAVEL", street: "B2 BLUESTONE ROAD / CLANROLLA ROAD", width: "N/A", dir: "TL", distance: 1.70, totalDist: 77.44, lat: 55.0120, lng: -7.8950 },
-      { seq: 789, mode: "TRAVEL", street: "OLD LURGAN ROAD TO LINISKY ROAD JUNCTION", width: "N/A", dir: "TR", distance: 1.00, totalDist: 78.44, lat: 55.0220, lng: -7.9200 },
-      { seq: 791, mode: "SALT", street: "OLD LURGAN ROAD TO BALLYHANNON ROAD JUNCTION", width: 6, dir: "SA", distance: 0.65, totalDist: 79.08, lat: 55.0280, lng: -7.9360 },
-      { seq: 797, mode: "TRAVEL", street: "KILLYCOMAIN ROAD", width: "N/A", dir: "SA", distance: 0.09, totalDist: 79.18, lat: 55.0290, lng: -7.9385 },
-      { seq: 799, mode: "SALT", street: "1ST EXIT MINI RAB ONTO KILLYCOMAIN ROAD", width: 6, dir: "RAB TL", distance: 0.50, totalDist: 79.67, lat: 55.0340, lng: -7.9510 },
-      { seq: 805, mode: "SALT", street: "SALT MINI RAB", width: 6, dir: "RAB", distance: 0.05, totalDist: 79.73, lat: 55.0345, lng: -7.9525 },
-      { seq: 809, mode: "SALT", street: "EXIT MINI RAB ONTO PRINCESS WAY", width: 6, dir: "TL", distance: 1.15, totalDist: 80.87, lat: 55.0460, lng: -7.9810 },
-      { seq: 825, mode: "TRAVEL", street: "GILFORD ROAD", width: "N/A", dir: "TR", distance: 0.76, totalDist: 81.63, lat: 55.0530, lng: -8.0000 },
-      { seq: 837, mode: "TRAVEL", street: "2ND EXIT RAB", width: "N/A", dir: "RAB", distance: 0.02, totalDist: 81.66, lat: 55.0532, lng: -8.0005 },
-      { seq: 839, mode: "SALT", street: "KILLYCOMAIN ROAD", width: 6, dir: "SA", distance: 0.56, totalDist: 82.21, lat: 55.0580, lng: -8.0150 },
-      { seq: 845, mode: "TRAVEL", street: "LOOP RAB", width: "N/A", dir: "RAB", distance: 0.04, totalDist: 82.25, lat: 55.0584, lng: -8.0160 },
-      { seq: 848, mode: "TRAVEL", street: "KILLYCOMAIN ROAD TOWARDS PORTADOWN", width: "N/A", dir: "TL", distance: 0.56, totalDist: 82.81, lat: 55.0635, lng: -8.0300 },
-      { seq: 854, mode: "TRAVEL", street: "2ND EXIT RAB", width: "N/A", dir: "RAB", distance: 0.02, totalDist: 82.83, lat: 55.0637, lng: -8.0305 },
-      { seq: 856, mode: "TRAVEL", street: "CARRICKBLACKER ROAD", width: "N/A", dir: "TL", distance: 0.06, totalDist: 82.89, lat: 55.0643, lng: -8.0320 },
-      { seq: 858, mode: "SALT", street: "BACHELORS WALK", width: 4, dir: "TR", distance: 0.50, totalDist: 83.40, lat: 55.0690, lng: -8.0450 },
-      { seq: 861, mode: "TRAVEL", street: "BRIDGE STREET", width: "N/A", dir: "TL", distance: 0.60, totalDist: 84.00, lat: 55.0745, lng: -8.0600 },
-      { seq: 866, mode: "SALT", street: "JOSEPH STREET", width: 8, dir: "TR", distance: 0.19, totalDist: 84.20, lat: 55.0760, lng: -8.0650 },
-      { seq: 868, mode: "SALT", street: "TREAT MINI RAB", width: 6, dir: "RAB", distance: 0.12, totalDist: 84.31, lat: 55.0770, lng: -8.0680 },
-      { seq: 873, mode: "TRAVEL", street: "1ST EXIT MINI RAB ONTO JOSEPH STREET", width: "N/A", dir: "RAB", distance: 0.07, totalDist: 84.38, lat: 55.0775, lng: -8.0695 },
-      { seq: 874, mode: "SALT", street: "JOSEPH STREET", width: 11, dir: "TL", distance: 0.10, totalDist: 84.48, lat: 55.0783, lng: -8.0720 },
-      { seq: 875, mode: "TRAVEL", street: "A3 NORTHWAY", width: "N/A", dir: "TR", distance: 0.78, totalDist: 85.26, lat: 55.0850, lng: -8.0900 },
-      { seq: 877, mode: "TRAVEL", street: "SEAGOE SLIP ROAD", width: "N/A", dir: "TR", distance: 0.23, totalDist: 85.49, lat: 55.0870, lng: -8.0950 },
-      { seq: 880, mode: "TRAVEL", street: "1ST EXIT MINI RAB ONTO SEAGOE ROAD", width: "N/A", dir: "RAB", distance: 1.59, totalDist: 87.08, lat: 55.1010, lng: -8.1350 },
-      { seq: 898, mode: "SALT", street: "CARN RAB ON SLIP", width: 6, dir: "SA", distance: 0.04, totalDist: 87.13, lat: 55.1014, lng: -8.1360 },
-      { seq: 899, mode: "TRAVEL", street: "2ND EXIT ON CARN ROUNDABOUT", width: "N/A", dir: "RAB", distance: 0.12, totalDist: 87.25, lat: 55.1025, lng: -8.1390 },
-      { seq: 902, mode: "SALT", street: "ROUNDABOUT OFF SLIP TO CARN ROAD", width: 6, dir: "TL", distance: 0.05, totalDist: 87.30, lat: 55.1030, lng: -8.1402 },
-      { seq: 903, mode: "TRAVEL", street: "CARN ROAD", width: "N/A", dir: "SA", distance: 0.91, totalDist: 88.21, lat: 55.1110, lng: -8.1630 },
+      { seq: 90, mode: "SALT", street: "MANDEVILLE ROAD", width: "6m", dir: "TL", distance: 0.49, totalDist: 9.09, lat: 54.4780, lng: -6.5900 },
+      { seq: 117, mode: "SALT", street: "HIGHFIELD NORTH ROAD", width: "6m", dir: "TL", distance: 0.41, totalDist: 11.88, lat: 54.4530, lng: -6.5180 },
+      { seq: 122, mode: "SALT", street: "BALTEAGH ROAD", width: "6m", dir: "TR", distance: 0.24, totalDist: 12.12, lat: 54.4510, lng: -6.5150 },
+      { seq: 143, mode: "SALT", street: "LAKEVIEW ROAD", width: "6m", dir: "TL", distance: 0.72, totalDist: 13.55, lat: 54.4480, lng: -6.5080 },
+      { seq: 169, mode: "SALT", street: "M12 TOWARDS BELFAST", width: "6m", dir: "TL", distance: 2.94, totalDist: 19.33, lat: 54.4400, lng: -6.4700 },
+      { seq: 181, mode: "SALT", street: "SALT J1 ROUNDABOUT", width: "6m", dir: "RAB", distance: 0.17, totalDist: 19.50, lat: 54.4420, lng: -6.4680 },
+      { seq: 194, mode: "SALT", street: "M12 TO END OF MOTORWAY", width: "6m", dir: "TL", distance: 1.64, totalDist: 21.28, lat: 54.4380, lng: -6.4850 },
+      { seq: 208, mode: "SALT", street: "NORTHWAY ON SLIP / NORTHWAY TO MILL AVENUE", width: "7m", dir: "TL", distance: 2.74, totalDist: 25.22, lat: 54.4320, lng: -6.4950 },
+      { seq: 283, mode: "SALT", street: "A4 CORCRAIN ROAD / CHARLES STREET", width: "6m", dir: "TR", distance: 1.43, totalDist: 30.08, lat: 54.4250, lng: -6.4600 },
+      { seq: 305, mode: "SALT", street: "GARVAGHY ROAD", width: "7m", dir: "TL", distance: 0.30, totalDist: 30.42, lat: 54.4280, lng: -6.4620 },
+      { seq: 320, mode: "SALT", street: "OBINS STREET / PARK ROAD", width: "6m", dir: "TL", distance: 1.43, totalDist: 32.29, lat: 54.4350, lng: -6.4650 },
+      { seq: 406, mode: "SALT", street: "MEADOW LANE", width: "7m", dir: "TL", distance: 0.35, totalDist: 37.34, lat: 54.4210, lng: -6.4420 },
+      { seq: 445, mode: "SALT", street: "A27 CHURCH STREET / ARMAGH ROAD", width: "6m", dir: "SA", distance: 1.73, totalDist: 41.60, lat: 54.4150, lng: -6.4500 },
+      { seq: 574, mode: "SALT", street: "A3 NORTHWAY", width: "7m", dir: "SA", distance: 2.71, totalDist: 51.26, lat: 54.4450, lng: -6.5050 },
+      { seq: 605, mode: "SALT", street: "SEAGOE ROAD", width: "6m", dir: "SA", distance: 0.41, totalDist: 54.00, lat: 54.4380, lng: -6.4750 },
+      { seq: 669, mode: "SALT", street: "BALLYHANNON ROAD", width: "5m", dir: "TR", distance: 1.33, totalDist: 60.12, lat: 54.4600, lng: -6.5300 },
+      { seq: 689, mode: "SALT", street: "OLD LURGAN ROAD", width: "6m", dir: "TL", distance: 1.00, totalDist: 62.55, lat: 54.4650, lng: -6.5400 },
+      { seq: 715, mode: "SALT", street: "KNOCKMENAGH ROAD", width: "6m", dir: "TL", distance: 1.02, totalDist: 66.14, lat: 54.4550, lng: -6.5500 },
+      { seq: 748, mode: "SALT", street: "SUGAR ISLAND ROAD", width: "5m", dir: "TR", distance: 1.84, totalDist: 71.19, lat: 54.4750, lng: -6.5650 },
+      { seq: 767, mode: "SALT", street: "DEANS ROAD", width: "4m", dir: "SA", distance: 1.42, totalDist: 74.25, lat: 54.4800, lng: -6.5700 },
+      { seq: 809, mode: "SALT", street: "EXIT MINI RAB ONTO PRINCESS WAY", width: "6m", dir: "TL", distance: 1.15, totalDist: 80.87, lat: 54.4250, lng: -6.4550 },
+      { seq: 874, mode: "SALT", street: "JOSEPH STREET", width: "11m", dir: "TL", distance: 0.10, totalDist: 84.48, lat: 54.4200, lng: -6.4480 },
       { seq: 913, mode: "TRAVEL", street: "RETURN TO DEPOT", width: "N/A", dir: "TL", distance: 0.04, totalDist: 88.25, lat: 54.4250, lng: -6.4800 }
     ];
 
@@ -370,27 +212,33 @@
     let map, lorryMarker, routeLine;
     let voiceEnabled = true;
 
+    // Initialize Leaflet Map
     function initMap() {
       map = L.map('map', { zoomControl: false }).setView([54.4250, -6.4800], 15);
       
+      // High-contrast tiles for night cab driving
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap'
       }).addTo(map);
 
+      // Plot route line on map
       const lineCoords = routeCARN1.map(p => [p.lat, p.lng]);
       routeLine = L.polyline(lineCoords, { color: '#ffcc00', weight: 6, opacity: 0.8 }).addTo(map);
 
+      // Lorry Location Marker
       lorryMarker = L.marker([54.4250, -6.4800]).addTo(map);
+
       setTimeout(() => { map.invalidateSize(); }, 300);
     }
 
+    // Update screen display and trigger voice
     function updateCabDisplay(speak = true) {
       const step = routeCARN1[currentIndex];
       
       const banner = document.getElementById("mode-banner");
       if (step.mode === "SALT") {
-        banner.innerText = `⚠️ SPREAD SALT (${step.width}m)`;
+        banner.innerText = `⚠️ SPREAD SALT (${step.width})`;
         banner.className = "mode-banner mode-salt";
       } else {
         banner.innerText = "🟢 TRAVEL - NO SPREAD";
@@ -400,29 +248,36 @@
       document.getElementById("street-name").innerText = step.street;
       document.getElementById("dir-text").innerText = step.dir;
       document.getElementById("width-text").innerText = step.width;
-      document.getElementById("dist-text").innerText = `${step.totalDist} km`;
+      document.getElementById("dist-text").innerText = `${step.distance} km`;
 
+      // Center map on lorry position
       const pos = [step.lat, step.lng];
       lorryMarker.setLatLng(pos);
       map.panTo(pos);
 
+      // Hands-Free Voice Announcement
       if (voiceEnabled && speak) {
         speakInstruction(step);
       }
     }
 
+    // Speech Synthesizer for Cab Voice Prompts
     function speakInstruction(step) {
       if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        let text = step.mode === "SALT" 
-          ? `Start spreading ${step.width} meters wide on ${step.street}.` 
-          : `Travel on ${step.street}. Stop spreading.`;
+        window.speechSynthesis.cancel(); // Clear previous queue
+        let text = "";
+        if (step.mode === "SALT") {
+          text = `Start spreading ${step.width} wide on ${step.street}.`;
+        } else {
+          text = `Travel on ${step.street}. Stop spreading.`;
+        }
         const msg = new SpeechSynthesisUtterance(text);
         msg.rate = 0.95;
         window.speechSynthesis.speak(msg);
       }
     }
 
+    // Calculate distance between two lat/lng coordinates in meters
     function getDistanceMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
       const φ1 = lat1 * Math.PI / 180;
@@ -435,10 +290,11 @@
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
+    // Start Live Hands-Free Driving Tracking
     function startNavigation() {
       const status = document.getElementById("gps-status");
       const btn = document.getElementById("start-btn");
-      btn.style.display = "none";
+      btn.style.display = "none"; // Hide button after starting
 
       if (navigator.geolocation) {
         status.innerText = "GPS ACTIVE";
@@ -448,9 +304,11 @@
           const uLat = pos.coords.latitude;
           const uLng = pos.coords.longitude;
 
+          // Update marker position
           lorryMarker.setLatLng([uLat, uLng]);
           map.panTo([uLat, uLng]);
 
+          // Check if lorry reached next waypoint (within 50 meters)
           const targetStep = routeCARN1[currentIndex];
           const dist = getDistanceMeters(uLat, uLng, targetStep.lat, targetStep.lng);
 
@@ -459,7 +317,7 @@
             updateCabDisplay(true);
           }
         }, err => {
-          alert("GPS Location Error: " + err.message);
+          alert("GPS Location Access Required: " + err.message);
         }, {
           enableHighAccuracy: true,
           maximumAge: 1000
