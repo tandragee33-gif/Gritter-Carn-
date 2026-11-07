@@ -130,7 +130,7 @@
 <body>
 
   <header>
-    <h1>Route CARN1 (88.25 km)[cite: 1]</h1>
+    <h1>Route CARN1 (88.25 km)</h1>
     <div id="gps-status" class="status-badge status-offline">GPS OFF</div>
   </header>
 
@@ -159,9 +159,10 @@
   <!-- Leaflet JavaScript -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Complete Route CARN1 (88.25 km) Full Dataset - Pages 1 to 6[cite: 1]
+    // Complete Route CARN1 (88.25 km) Full Dataset - Pages 1 to 6
+    // Starting depot location: 54.453905, -6.410553
     const routeCARN1 = [
-      { seq: 1, mode: "TRAVEL", street: "LEAVE DEPOT", width: "N/A", dir: "TR", distance: 0.04, totalDist: 0.04, lat: 54.4250, lng: -6.4800 },
+      { seq: 1, mode: "TRAVEL", street: "LEAVE DEPOT", width: "N/A", dir: "TR", distance: 0.04, totalDist: 0.04, lat: 54.453905, lng: -6.410553 },
       { seq: 2, mode: "TRAVEL", street: "CARN ROAD", width: "N/A", dir: "TR", distance: 0.95, totalDist: 0.99, lat: 54.4255, lng: -6.4820 },
       { seq: 12, mode: "TRAVEL", street: "1ST EXIT RAB", width: "N/A", dir: "RAB", distance: 0.01, totalDist: 1.00, lat: 54.4260, lng: -6.4850 },
       { seq: 13, mode: "SALT", street: "SALT SLIP ROAD", width: 6, dir: "TL", distance: 0.28, totalDist: 1.28, lat: 54.4270, lng: -6.4860 },
@@ -366,18 +367,35 @@
       { seq: 899, mode: "TRAVEL", street: "2ND EXIT ON CARN ROUNDABOUT", width: "N/A", dir: "RAB", distance: 0.12, totalDist: 87.25, lat: 55.1025, lng: -8.1390 },
       { seq: 902, mode: "SALT", street: "ROUNDABOUT OFF SLIP TO CARN ROAD", width: 6, dir: "TL", distance: 0.05, totalDist: 87.30, lat: 55.1030, lng: -8.1402 },
       { seq: 903, mode: "TRAVEL", street: "CARN ROAD", width: "N/A", dir: "SA", distance: 0.91, totalDist: 88.21, lat: 55.1110, lng: -8.1630 },
-      { seq: 913, mode: "TRAVEL", street: "RETURN TO DEPOT", width: "N/A", dir: "TL", distance: 0.04, totalDist: 88.25, lat: 54.4250, lng: -6.4800 }
+      { seq: 913, mode: "TRAVEL", street: "RETURN TO DEPOT", width: "N/A", dir: "TL", distance: 0.04, totalDist: 88.25, lat: 54.453905, lng: -6.410553 }
     ];
 
     let currentIndex = 0;
     let map, lorryMarker, routeLine;
     let voiceEnabled = true;
     let simulationInterval = null;
+    let preferredVoice = null;
+
+    // Load and select the best natural English voice available on the device
+    function initVoices() {
+      if ('speechSynthesis' in window) {
+        let voices = window.speechSynthesis.getVoices();
+        // Look for English UK or standard high quality English voices
+        preferredVoice = voices.find(v => v.lang.includes('en-GB')) || 
+                         voices.find(v => v.lang.includes('en-US')) || 
+                         voices[0];
+      }
+    }
+
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = initVoices;
+      initVoices();
+    }
 
     function initMap() {
-      map = L.map('map', { zoomControl: false }).setView([54.4250, -6.4800], 15);
+      map = L.map('map', { zoomControl: false }).setView([54.453905, -6.410553], 15);
       
-      // Standard OpenStreetMap tiles - completely free, no API key required
+      // Standard OpenStreetMap tiles - completely free
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap'
@@ -386,7 +404,7 @@
       const lineCoords = routeCARN1.map(p => [p.lat, p.lng]);
       routeLine = L.polyline(lineCoords, { color: '#ffcc00', weight: 6, opacity: 0.8 }).addTo(map);
 
-      lorryMarker = L.marker([54.4250, -6.4800]).addTo(map);
+      lorryMarker = L.marker([54.453905, -6.410553]).addTo(map);
       setTimeout(() => { map.invalidateSize(); }, 300);
     }
 
@@ -416,19 +434,44 @@
       }
     }
 
+    // Translates abbreviation codes into full spoken words
+    function getSpokenDirection(dirCode) {
+      if (!dirCode) return "";
+      let code = dirCode.toUpperCase().trim();
+      
+      if (code === "TL") return "Turn left";
+      if (code === "TR") return "Turn right";
+      if (code === "RAB") return "At the roundabout";
+      if (code === "RAB TL") return "At the roundabout, turn left";
+      if (code === "SA") return "Go straight ahead";
+      if (code === "TURN") return "Turn around where safe to do so";
+      
+      return code;
+    }
+
     function speakInstruction(step) {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
-        let text = step.mode === "SALT" 
-          ? `Start spreading ${step.width} meters wide on ${step.street}.` 
-          : `Travel on ${step.street}. Stop spreading.`;
+        
+        const actionText = getSpokenDirection(step.dir);
+        let text = "";
+
+        if (step.mode === "SALT") {
+          text = `${actionText}. Start spreading ${step.width} meters wide on ${step.street}.`;
+        } else {
+          text = `${actionText}. Travel on ${step.street}. Stop spreading.`;
+        }
+
         const msg = new SpeechSynthesisUtterance(text);
-        msg.rate = 0.95;
+        if (preferredVoice) {
+          msg.voice = preferredVoice;
+        }
+        msg.rate = 0.90; // Natural driving pace
+        msg.pitch = 1.0;
         window.speechSynthesis.speak(msg);
       }
     }
 
-    // Global toggleVoice function for the voice button
     function toggleVoice() {
       voiceEnabled = !voiceEnabled;
       const btn = document.getElementById("voice-btn");
@@ -438,7 +481,7 @@
     // Automated Demo Simulation Mode for testing at home
     function startSimulation() {
       if (simulationInterval) clearInterval(simulationInterval);
-      currentIndex = 0; // Reset to start
+      currentIndex = 0;
       updateCabDisplay(true);
       
       simulationInterval = setInterval(() => {
@@ -449,7 +492,7 @@
           clearInterval(simulationInterval);
           alert("Simulation finished!");
         }
-      }, 4000); // Advances every 4 seconds
+      }, 5500); // 5.5 seconds per step gives enough time to hear the full voice prompt
     }
 
     function getDistanceMeters(lat1, lon1, lat2, lon2) {
@@ -465,7 +508,7 @@
     }
 
     function startNavigation() {
-      if (simulationInterval) clearInterval(simulationInterval); // Stop sim if running
+      if (simulationInterval) clearInterval(simulationInterval);
       const status = document.getElementById("gps-status");
 
       if (navigator.geolocation) {
