@@ -129,7 +129,7 @@
 <body>
 
   <header>
-    <h1>Route CARN1 (88.25 km)</h1>
+    <h1>Route CARN1 (88.25 km)[cite: 1]</h1>
     <div id="gps-status" class="status-badge status-offline">GPS OFF</div>
   </header>
 
@@ -156,7 +156,7 @@
   <!-- Leaflet JavaScript -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Complete Route CARN1 Dataset - Pages 1 to 6
+    // Complete Route CARN1 (88.25 km) Full Dataset - Pages 1 to 6[cite: 1]
     const routeCARN1 = [
       { seq: 1, mode: "TRAVEL", street: "LEAVE DEPOT", width: "N/A", dir: "TR", distance: 0.04, totalDist: 0.04, lat: 54.4250, lng: -6.4800 },
       { seq: 2, mode: "TRAVEL", street: "CARN ROAD", width: "N/A", dir: "TR", distance: 0.95, totalDist: 0.99, lat: 54.4255, lng: -6.4820 },
@@ -373,7 +373,7 @@
     function initMap() {
       map = L.map('map', { zoomControl: false }).setView([54.4250, -6.4800], 15);
       
-      // Standard OpenStreetMap tiles - absolutely no API key required
+      // Standard OpenStreetMap tiles - completely free, no API key required
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap'
@@ -424,6 +424,13 @@
       }
     }
 
+    // Global toggleVoice function for the voice button
+    function toggleVoice() {
+      voiceEnabled = !voiceEnabled;
+      const btn = document.getElementById("voice-btn");
+      btn.innerText = voiceEnabled ? "🔊 Voice: ON" : "🔇 Voice: OFF";
+    }
+
     function getDistanceMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
       const φ1 = lat1 * Math.PI / 180;
@@ -463,4 +470,17 @@
           alert("GPS Location Error: " + err.message);
         }, {
           enableHighAccuracy: true,
-          maximumAge:
+          maximumAge: 1000
+        });
+      } else {
+        alert("Geolocation is not supported by your mobile browser.");
+      }
+    }
+
+    window.onload = function() {
+      initMap();
+      updateCabDisplay(false);
+    };
+  </script>
+</body>
+</html>
