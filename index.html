@@ -43,7 +43,7 @@
     /* Map Box */
     #map {
       width: 100%;
-      height: 45vh;
+      height: 40vh;
       border-radius: 10px;
       border: 2px solid #ffcc00;
       background: #222;
@@ -109,13 +109,13 @@
     /* Control Bar */
     .controls {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       margin-top: 8px;
     }
     .btn {
       flex: 1;
-      padding: 14px;
-      font-size: 16px;
+      padding: 12px;
+      font-size: 14px;
       font-weight: bold;
       border: none;
       border-radius: 8px;
@@ -124,6 +124,7 @@
     }
     .btn-start { background: #0088ff; color: #fff; }
     .btn-voice { background: #555; color: #fff; }
+    .btn-sim { background: #8800cc; color: #fff; }
   </style>
 </head>
 <body>
@@ -148,9 +149,11 @@
     </div>
   </div>
 
+  <!-- Control Buttons Bar -->
   <div class="controls">
-    <button class="btn btn-voice" id="voice-btn" onclick="toggleVoice()">🔊 Voice: ON</button>
-    <button class="btn btn-start" id="start-btn" onclick="startNavigation()">▶ Start Driving Mode</button>
+    <button class="btn btn-voice" id="voice-btn" onclick="toggleVoice()">🔊 Voice</button>
+    <button class="btn btn-sim" onclick="startSimulation()">🧪 Test Demo</button>
+    <button class="btn btn-start" id="start-btn" onclick="startNavigation()">▶ GPS Drive</button>
   </div>
 
   <!-- Leaflet JavaScript -->
@@ -369,6 +372,7 @@
     let currentIndex = 0;
     let map, lorryMarker, routeLine;
     let voiceEnabled = true;
+    let simulationInterval = null;
 
     function initMap() {
       map = L.map('map', { zoomControl: false }).setView([54.4250, -6.4800], 15);
@@ -428,7 +432,24 @@
     function toggleVoice() {
       voiceEnabled = !voiceEnabled;
       const btn = document.getElementById("voice-btn");
-      btn.innerText = voiceEnabled ? "🔊 Voice: ON" : "🔇 Voice: OFF";
+      btn.innerText = voiceEnabled ? "🔊 Voice" : "🔇 Voice";
+    }
+
+    // Automated Demo Simulation Mode for testing at home
+    function startSimulation() {
+      if (simulationInterval) clearInterval(simulationInterval);
+      currentIndex = 0; // Reset to start
+      updateCabDisplay(true);
+      
+      simulationInterval = setInterval(() => {
+        if (currentIndex < routeCARN1.length - 1) {
+          currentIndex++;
+          updateCabDisplay(true);
+        } else {
+          clearInterval(simulationInterval);
+          alert("Simulation finished!");
+        }
+      }, 4000); // Advances every 4 seconds
     }
 
     function getDistanceMeters(lat1, lon1, lat2, lon2) {
@@ -444,9 +465,8 @@
     }
 
     function startNavigation() {
+      if (simulationInterval) clearInterval(simulationInterval); // Stop sim if running
       const status = document.getElementById("gps-status");
-      const btn = document.getElementById("start-btn");
-      btn.style.display = "none";
 
       if (navigator.geolocation) {
         status.innerText = "GPS ACTIVE";
