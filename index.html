@@ -158,11 +158,11 @@
 
   <!-- Leaflet Core JavaScript -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- Leaflet GPX Plugin for reading standard track files -->
+  <!-- Leaflet GPX Plugin -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/2.1.2/gpx.min.js"></script>
   
   <script>
-    // Complete Route CARN1 Unabridged Instruction Schedule (Powered for Voice & Cab Cards)
+    // Complete Route CARN1 Unabridged Instruction Schedule
     const routeCARN1 = [
       { seq: 1, mode: "TRAVEL", street: "LEAVE DEPOT", width: "N/A", dir: "TR", distance: 0.04, totalDist: 0.04, lat: 54.453905, lng: -6.410553 },
       { seq: 2, mode: "TRAVEL", street: "CARN ROAD", width: "N/A", dir: "TR", distance: 0.95, totalDist: 0.99, lat: 54.4545, lng: -6.4120 },
@@ -377,6 +377,7 @@
     let voiceEnabled = true;
     let simulationInterval = null;
     let preferredVoice = null;
+    let gpxCoordinates = []; // Stores exact track points extracted from carn1.gpx
 
     function initVoices() {
       if ('speechSynthesis' in window) {
@@ -395,17 +396,16 @@
     function initMap() {
       map = L.map('map', { zoomControl: false }).setView([54.453905, -6.410553], 15);
       
-      // Free OpenStreetMap tiles
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap'
       }).addTo(map);
 
-      // Load official carn1.gpx route file dynamically to trace exact roads
+      // Load official carn1.gpx track file and extract its precise path points
       new L.GPX('carn1.gpx', {
         async: true,
         polyline_options: {
-          color: '#ffcc00', // Gritter Yellow
+          color: '#ffcc00',
           weight: 6,
           opacity: 0.8
         },
@@ -416,9 +416,15 @@
         }
       }).on('loaded', function(e) {
         map.fitBounds(e.target.getBounds());
+
+        // Extract exact coordinates from the uploaded GPX track
+        e.target.eachLayer(function(layer) {
+          if (layer instanceof L.Polyline) {
+            gpxCoordinates = layer.getLatLngs();
+          }
+        });
       }).addTo(map);
 
-      // Live Lorry Marker starting at exact depot coordinate
       lorryMarker = L.marker([54.453905, -6.410553]).addTo(map);
       setTimeout(() => { map.invalidateSize(); }, 300);
     }
@@ -440,7 +446,15 @@
       document.getElementById("width-text").innerText = step.width;
       document.getElementById("dist-text").innerText = `${step.totalDist} km`;
 
-      const pos = [step.lat, step.lng];
+      // Position marker smoothly along the uploaded GPX track points
+      let pos;
+      if (gpxCoordinates.length > 0) {
+        let pointIdx = Math.floor((currentIndex / (routeCARN1.length - 1)) * (gpxCoordinates.length - 1));
+        pos = gpxCoordinates[pointIdx];
+      } else {
+        pos = [step.lat, step.lng];
+      }
+
       lorryMarker.setLatLng(pos);
       map.panTo(pos);
 
@@ -449,7 +463,6 @@
       }
     }
 
-    // Translates all routing abbreviations into full spoken English words
     function getSpokenDirection(dirCode) {
       if (!dirCode) return "";
       let code = dirCode.toUpperCase().trim();
