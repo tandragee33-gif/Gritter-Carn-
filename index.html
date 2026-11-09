@@ -768,6 +768,34 @@
       if (err.code === 1) alert("Please allow Location access in your browser settings.");
     }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
   }
+      // Position along the GPX line for a given route distance (km)
+  let gpxFlat = [], gpxCum = [];
+
+  function gpxPosAtKm(km) {
+    const pts = gpxCoordinates.flat(Infinity);
+    if (pts.length < 2) return null;
+
+    if (gpxCum.length !== pts.length) {          // build distances once
+      gpxFlat = pts;
+      gpxCum = [0];
+      for (let i = 1; i < pts.length; i++) {
+        gpxCum.push(gpxCum[i - 1] +
+          getDistanceMeters(pts[i - 1].lat, pts[i - 1].lng, pts[i].lat, pts[i].lng) / 1000);
+      }
+    }
+
+    const total = gpxCum[gpxCum.length - 1];
+    const target = (km / routeCARN1[routeCARN1.length - 1].totalDist) * total;
+    let i = gpxCum.findIndex(c => c >= target);
+    if (i === -1) return [pts[pts.length - 1].lat, pts[pts.length - 1].lng];
+    if (i === 0) return [pts[0].lat, pts[0].lng];
+
+    const f = (target - gpxCum[i - 1]) / ((gpxCum[i] - gpxCum[i - 1]) || 1);
+    return [
+      pts[i - 1].lat + (pts[i].lat - pts[i - 1].lat) * f,
+      pts[i - 1].lng + (pts[i].lng - pts[i - 1].lng) * f
+    ];
+  }
 </script>
 </body>
 </html>
