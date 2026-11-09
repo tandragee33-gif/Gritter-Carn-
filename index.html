@@ -43,7 +43,7 @@
     /* Map Box */
     #map {
       width: 100%;
-      height: 40vh;
+      height: 35vh;
       border-radius: 10px;
       border: 2px solid #ffcc00;
       background: #222;
@@ -109,12 +109,17 @@
     /* Control Bar */
     .controls {
       display: flex;
+      flex-direction: column;
       gap: 6px;
       margin-top: 8px;
     }
+    .btn-row {
+      display: flex;
+      gap: 6px;
+    }
     .btn {
       flex: 1;
-      padding: 12px;
+      padding: 14px;
       font-size: 14px;
       font-weight: bold;
       border: none;
@@ -125,6 +130,7 @@
     .btn-start { background: #0088ff; color: #fff; }
     .btn-voice { background: #555; color: #fff; }
     .btn-sim { background: #8800cc; color: #fff; }
+    .btn-next { background: #ffaa00; color: #000; font-size: 16px; font-weight: 900; padding: 16px; }
   </style>
 </head>
 <body>
@@ -151,9 +157,12 @@
 
   <!-- Control Buttons Bar -->
   <div class="controls">
-    <button class="btn btn-voice" id="voice-btn" onclick="toggleVoice()">🔊 Voice</button>
-    <button class="btn btn-sim" onclick="startSimulation()">🧪 Test Demo</button>
-    <button class="btn btn-start" id="start-btn" onclick="startNavigation()">▶ GPS Drive</button>
+    <button class="btn btn-next" onclick="manualNextStep()">⏭ NEXT STEP (MANUAL OVERRIDE)</button>
+    <div class="btn-row">
+      <button class="btn btn-voice" id="voice-btn" onclick="toggleVoice()">🔊 Voice</button>
+      <button class="btn btn-sim" onclick="startSimulation()">🧪 Test Demo</button>
+      <button class="btn btn-start" id="start-btn" onclick="startNavigation()">▶ GPS Drive</button>
+    </div>
   </div>
 
   <!-- Leaflet Core JavaScript -->
@@ -162,7 +171,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/2.1.2/gpx.min.js"></script>
   
   <script>
-    // Complete Route CARN1 Unabridged Instruction Schedule
+    // Complete Unabridged Route CARN1 Direction Schedule
     const routeCARN1 = [
       { seq: 1, mode: "TRAVEL", street: "LEAVE DEPOT", width: "N/A", dir: "TR", distance: 0.04, totalDist: 0.04, lat: 54.453905, lng: -6.410553 },
       { seq: 2, mode: "TRAVEL", street: "CARN ROAD", width: "N/A", dir: "TR", distance: 0.95, totalDist: 0.99, lat: 54.4545, lng: -6.4120 },
@@ -344,31 +353,31 @@
       { seq: 773, mode: "TRAVEL", street: "DRUMGASK ROAD", width: "N/A", dir: "TL", distance: 1.31, totalDist: 75.73, lat: 54.8140, lng: -7.2900 },
       { seq: 782, mode: "TRAVEL", street: "BLUESTONE ROAD", width: "N/A", dir: "TL", distance: 1.70, totalDist: 77.44, lat: 54.8210, lng: -7.3100 },
       { seq: 789, mode: "TRAVEL", street: "OLD LURGAN ROAD", width: "N/A", dir: "TR", distance: 1.00, totalDist: 78.44, lat: 54.8260, lng: -7.3220 },
-      { seq: 791, mode: "SALT", street: "OLD LURGAN ROAD TO BALLYHANNON", width: 6, dir: "SA", distance: 0.65, totalDist: 79.08, lat: 54.8290, lng: -7.3300 },
-      { seq: 797, mode: "TRAVEL", street: "KILLYCOMAIN ROAD", width: "N/A", dir: "SA", distance: 0.09, totalDist: 79.18, lat: 54.8295, lng: -7.3312 },
-      { seq: 799, mode: "SALT", street: "1ST EXIT MINI RAB KILLYCOMAIN", width: 6, dir: "RAB TL", distance: 0.50, totalDist: 79.67, lat: 54.8320, lng: -7.3380 },
-      { seq: 805, mode: "SALT", street: "SALT MINI RAB", width: 6, dir: "RAB", distance: 0.05, totalDist: 79.73, lat: 54.8323, lng: -7.3390 },
-      { seq: 809, mode: "SALT", street: "PRINCESS WAY", width: 6, dir: "TL", distance: 1.15, totalDist: 80.87, lat: 54.8370, lng: -7.3520 },
-      { seq: 825, mode: "TRAVEL", street: "GILFORD ROAD", width: "N/A", dir: "TR", distance: 0.76, totalDist: 81.63, lat: 54.8405, lng: -7.3620 },
-      { seq: 837, mode: "TRAVEL", street: "2ND EXIT RAB", width: "N/A", dir: "RAB", distance: 0.02, totalDist: 81.66, lat: 54.8407, lng: -7.3625 },
-      { seq: 839, mode: "SALT", street: "KILLYCOMAIN ROAD", width: 6, dir: "SA", distance: 0.56, totalDist: 82.21, lat: 54.8430, lng: -7.3700 },
-      { seq: 845, mode: "TRAVEL", street: "LOOP RAB", width: "N/A", dir: "RAB", distance: 0.04, totalDist: 82.25, lat: 54.8433, lng: -7.3710 },
-      { seq: 848, mode: "TRAVEL", street: "KILLYCOMAIN TOWARDS PORTADOWN", width: "N/A", dir: "TL", distance: 0.56, totalDist: 82.81, lat: 54.8460, lng: -7.3780 },
-      { seq: 854, mode: "TRAVEL", street: "2ND EXIT RAB", width: "N/A", dir: "RAB", distance: 0.02, totalDist: 82.83, lat: 54.8462, lng: -7.3785 },
-      { seq: 856, mode: "TRAVEL", street: "CARRICKBLACKER ROAD", width: "N/A", dir: "TL", distance: 0.06, totalDist: 82.89, lat: 54.8467, lng: -7.3800 },
-      { seq: 858, mode: "SALT", street: "BACHELORS WALK", width: 4, dir: "TR", distance: 0.50, totalDist: 83.40, lat: 54.8490, lng: -7.3880 },
-      { seq: 861, mode: "TRAVEL", street: "BRIDGE STREET", width: "N/A", dir: "TL", distance: 0.60, totalDist: 84.00, lat: 54.8520, lng: -7.3970 },
-      { seq: 866, mode: "SALT", street: "JOSEPH STREET", width: 8, dir: "TR", distance: 0.19, totalDist: 84.20, lat: 54.8530, lng: -7.3995 },
-      { seq: 868, mode: "SALT", street: "TREAT MINI RAB", width: 6, dir: "RAB", distance: 0.12, totalDist: 84.31, lat: 54.8535, lng: -7.4010 },
-      { seq: 873, mode: "TRAVEL", street: "1ST EXIT MINI RAB JOSEPH ST", width: "N/A", dir: "RAB", distance: 0.07, totalDist: 84.38, lat: 54.8538, lng: -7.4020 },
-      { seq: 874, mode: "SALT", street: "JOSEPH STREET", width: 11, dir: "TL", distance: 0.10, totalDist: 84.48, lat: 54.8543, lng: -7.4035 },
-      { seq: 875, mode: "TRAVEL", street: "A3 NORTHWAY", width: "N/A", dir: "TR", distance: 0.78, totalDist: 85.26, lat: 54.8580, lng: -7.4120 },
-      { seq: 877, mode: "TRAVEL", street: "SEAGOE SLIP ROAD", width: "N/A", dir: "TR", distance: 0.23, totalDist: 85.49, lat: 54.8590, lng: -7.4150 },
-      { seq: 880, mode: "TRAVEL", street: "SEAGOE ROAD", width: "N/A", dir: "RAB", distance: 1.59, totalDist: 87.08, lat: 54.8660, lng: -7.4350 },
-      { seq: 898, mode: "SALT", street: "CARN RAB ON SLIP", width: 6, dir: "SA", distance: 0.04, totalDist: 87.13, lat: 54.8663, lng: -7.4358 },
-      { seq: 899, mode: "TRAVEL", street: "2ND EXIT CARN ROUNDABOUT", width: "N/A", dir: "RAB", distance: 0.12, totalDist: 87.25, lat: 54.8670, lng: -7.4375 },
-      { seq: 902, mode: "SALT", street: "OFF SLIP TO CARN ROAD", width: 6, dir: "TL", distance: 0.05, totalDist: 87.30, lat: 54.8673, lng: -7.4382 },
-      { seq: 903, mode: "TRAVEL", street: "CARN ROAD", width: "N/A", dir: "SA", distance: 0.91, totalDist: 88.21, lat: 54.8720, lng: -7.4500 },
+      { seq: 791, mode: "SALT", street: "OLD LURGAN ROAD TO BALLYHANNON", width: 6, dir: "SA", distance: 0.65, totalDist: 79.08, lat: 55.0280, lng: -7.9360 },
+      { seq: 797, mode: "TRAVEL", street: "KILLYCOMAIN ROAD", width: "N/A", dir: "SA", distance: 0.09, totalDist: 79.18, lat: 55.0290, lng: -7.9385 },
+      { seq: 799, mode: "SALT", street: "1ST EXIT MINI RAB KILLYCOMAIN", width: 6, dir: "RAB TL", distance: 0.50, totalDist: 79.67, lat: 55.0340, lng: -7.9510 },
+      { seq: 805, mode: "SALT", street: "SALT MINI RAB", width: 6, dir: "RAB", distance: 0.05, totalDist: 79.73, lat: 55.0345, lng: -7.9525 },
+      { seq: 809, mode: "SALT", street: "PRINCESS WAY", width: 6, dir: "TL", distance: 1.15, totalDist: 80.87, lat: 55.0460, lng: -7.9810 },
+      { seq: 825, mode: "TRAVEL", street: "GILFORD ROAD", width: "N/A", dir: "TR", distance: 0.76, totalDist: 81.63, lat: 55.0530, lng: -8.0000 },
+      { seq: 837, mode: "TRAVEL", street: "2ND EXIT RAB", width: "N/A", dir: "RAB", distance: 0.02, totalDist: 81.66, lat: 55.0532, lng: -8.0005 },
+      { seq: 839, mode: "SALT", street: "KILLYCOMAIN ROAD", width: 6, dir: "SA", distance: 0.56, totalDist: 82.21, lat: 55.0580, lng: -8.0150 },
+      { seq: 845, mode: "TRAVEL", street: "LOOP RAB", width: "N/A", dir: "RAB", distance: 0.04, totalDist: 82.25, lat: 55.0584, lng: -8.0160 },
+      { seq: 848, mode: "TRAVEL", street: "KILLYCOMAIN TOWARDS PORTADOWN", width: "N/A", dir: "TL", distance: 0.56, totalDist: 82.81, lat: 55.0635, lng: -8.0300 },
+      { seq: 854, mode: "TRAVEL", street: "2ND EXIT RAB", width: "N/A", dir: "RAB", distance: 0.02, totalDist: 82.83, lat: 55.0637, lng: -8.0305 },
+      { seq: 856, mode: "TRAVEL", street: "CARRICKBLACKER ROAD", width: "N/A", dir: "TL", distance: 0.06, totalDist: 82.89, lat: 55.0643, lng: -8.0320 },
+      { seq: 858, mode: "SALT", street: "BACHELORS WALK", width: 4, dir: "TR", distance: 0.50, totalDist: 83.40, lat: 55.0690, lng: -8.0450 },
+      { seq: 861, mode: "TRAVEL", street: "BRIDGE STREET", width: "N/A", dir: "TL", distance: 0.60, totalDist: 84.00, lat: 55.0745, lng: -8.0600 },
+      { seq: 866, mode: "SALT", street: "JOSEPH STREET", width: 8, dir: "TR", distance: 0.19, totalDist: 84.20, lat: 55.0760, lng: -8.0650 },
+      { seq: 868, mode: "SALT", street: "TREAT MINI RAB", width: 6, dir: "RAB", distance: 0.12, totalDist: 84.31, lat: 55.0770, lng: -8.0680 },
+      { seq: 873, mode: "TRAVEL", street: "1ST EXIT MINI RAB JOSEPH ST", width: "N/A", dir: "RAB", distance: 0.07, totalDist: 84.38, lat: 55.0775, lng: -8.0695 },
+      { seq: 874, mode: "SALT", street: "JOSEPH STREET", width: 11, dir: "TL", distance: 0.10, totalDist: 84.48, lat: 55.0783, lng: -8.0720 },
+      { seq: 875, mode: "TRAVEL", street: "A3 NORTHWAY", width: "N/A", dir: "TR", distance: 0.78, totalDist: 85.26, lat: 55.0850, lng: -8.0900 },
+      { seq: 877, mode: "TRAVEL", street: "SEAGOE SLIP ROAD", width: "N/A", dir: "TR", distance: 0.23, totalDist: 85.49, lat: 55.0870, lng: -8.0950 },
+      { seq: 880, mode: "TRAVEL", street: "SEAGOE ROAD", width: "N/A", dir: "RAB", distance: 1.59, totalDist: 87.08, lat: 55.1010, lng: -8.1350 },
+      { seq: 898, mode: "SALT", street: "CARN RAB ON SLIP", width: 6, dir: "SA", distance: 0.04, totalDist: 87.13, lat: 55.1014, lng: -8.1360 },
+      { seq: 899, mode: "TRAVEL", street: "2ND EXIT CARN ROUNDABOUT", width: "N/A", dir: "RAB", distance: 0.12, totalDist: 87.25, lat: 55.1025, lng: -8.1390 },
+      { seq: 902, mode: "SALT", street: "OFF SLIP TO CARN ROAD", width: 6, dir: "TL", distance: 0.05, totalDist: 87.30, lat: 55.1030, lng: -8.1402 },
+      { seq: 903, mode: "TRAVEL", street: "CARN ROAD", width: "N/A", dir: "SA", distance: 0.91, totalDist: 88.21, lat: 55.1110, lng: -8.1630 },
       { seq: 913, mode: "TRAVEL", street: "RETURN TO DEPOT", width: "N/A", dir: "TL", distance: 0.04, totalDist: 88.25, lat: 54.453905, lng: -6.410553 }
     ];
 
@@ -377,7 +386,7 @@
     let voiceEnabled = true;
     let simulationInterval = null;
     let preferredVoice = null;
-    let gpxCoordinates = []; // Stores exact track points extracted from carn1.gpx
+    let gpxCoordinates = [];
 
     function initVoices() {
       if ('speechSynthesis' in window) {
@@ -401,7 +410,6 @@
         attribution: '&copy; OpenStreetMap'
       }).addTo(map);
 
-      // Load official carn1.gpx track file and extract its precise path points
       new L.GPX('carn1.gpx', {
         async: true,
         polyline_options: {
@@ -417,7 +425,6 @@
       }).on('loaded', function(e) {
         map.fitBounds(e.target.getBounds());
 
-        // Extract exact coordinates from the uploaded GPX track
         e.target.eachLayer(function(layer) {
           if (layer instanceof L.Polyline) {
             gpxCoordinates = layer.getLatLngs();
@@ -446,7 +453,6 @@
       document.getElementById("width-text").innerText = step.width;
       document.getElementById("dist-text").innerText = `${step.totalDist} km`;
 
-      // Position marker smoothly along the uploaded GPX track points
       let pos;
       if (gpxCoordinates.length > 0) {
         let pointIdx = Math.floor((currentIndex / (routeCARN1.length - 1)) * (gpxCoordinates.length - 1));
@@ -460,6 +466,15 @@
 
       if (voiceEnabled && speak) {
         speakInstruction(step);
+      }
+    }
+
+    function manualNextStep() {
+      if (currentIndex < routeCARN1.length - 1) {
+        currentIndex++;
+        updateCabDisplay(true);
+      } else {
+        alert("Route completed!");
       }
     }
 
@@ -539,7 +554,7 @@
       const status = document.getElementById("gps-status");
 
       if (navigator.geolocation) {
-        status.innerText = "GPS ACTIVE";
+        status.innerText = "GPS WAITING...";
         status.className = "status-badge status-online";
 
         navigator.geolocation.watchPosition(pos => {
@@ -552,15 +567,21 @@
           const targetStep = routeCARN1[currentIndex];
           const dist = getDistanceMeters(uLat, uLng, targetStep.lat, targetStep.lng);
 
-          if (dist < 50 && currentIndex < routeCARN1.length - 1) {
+          status.innerText = `GPS (${Math.round(dist)}m)`;
+
+          // Auto-advance if within 100m tolerance
+          if (dist < 100 && currentIndex < routeCARN1.length - 1) {
             currentIndex++;
             updateCabDisplay(true);
           }
         }, err => {
-          alert("GPS Location Error: " + err.message);
+          status.innerText = "GPS BLOCKED";
+          status.className = "status-badge status-offline";
+          alert("GPS Permission Error: Please allow Location access in your mobile browser settings.");
         }, {
           enableHighAccuracy: true,
-          maximumAge: 1000
+          maximumAge: 1000,
+          timeout: 10000
         });
       } else {
         alert("Geolocation is not supported by your mobile browser.");
