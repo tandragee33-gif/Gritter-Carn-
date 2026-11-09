@@ -459,13 +459,8 @@
       document.getElementById("dist-text").innerText = `${step.totalDist} km`;
 
       // Safe position resolver: uses GPX track points if loaded, otherwise falls back to exact step coordinates
-      let pos;
-      if (gpxCoordinates.length > 0) {
-        let pointIdx = Math.floor((currentIndex / (routeCARN1.length - 1)) * (gpxCoordinates.length - 1));
-        pos = gpxCoordinates[pointIdx];
-      } else {
-        pos = [step.lat || 54.453905, step.lng || -6.410553];
-      }
+      let pos = gpxPosAtKm(stepStartKm(currentIndex)) ||
+                [step.lat || 54.453905, step.lng || -6.410553];
 
       lorryMarker.setLatLng(pos);
       map.panTo(pos);
