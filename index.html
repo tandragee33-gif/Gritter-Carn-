@@ -593,51 +593,86 @@
     window.onload = function() {
       initMap();
     };
-  </script>
-  <script>
-  // ===== GPS FIX: paste above </body>. Your route data is not touched. =====
+<script>
+  // ===== GRITTER FIX (single block, paste above </body>). Route data is not touched. =====
 
   const LEAD_KM = 0.10;   // announce each step this far before it starts (0.10 = 100 m)
   let gpsWatchId = null, gpsActive = false, lastFix = null, travelledKm = 0;
+  let gpxCum = [];        // cumulative km along the GPX line
 
   // Step N starts where step N-1 ended (its totalDist)
   function stepStartKm(i) { return i === 0 ? 0 : routeCARN1[i - 1].totalDist; }
 
+  // Position on the GPX line for a given route distance (km), scaled to fit
+  function gpxPosAtKm(km) {
+    const pts = gpxCoordinates;
+    if (!pts || pts.length < 2) return null;
+
+    if (gpxCum.length !== pts.length) {
+      gpxCum = [0];
+      for (let i = 1; i < pts.length; i++) {
+        gpxCum.push(gpxCum[i - 1] +
+          getDistanceMeters(pts[i - 1].lat, pts[i - 1].lng, pts[i].lat, pts[i].lng) / 1000);
+      }
+    }
+
+    const total = gpxCum[gpxCum.length - 1];
+    const target = Math.min(1, km / routeCARN1[routeCARN1.length - 1].totalDist) * total;
+    const i = gpxCum.findIndex(c => c >= target);
+    if (i <= 0) return [pts[0].lat, pts[0].lng];
+
+    const f = (target - gpxCum[i - 1]) / ((gpxCum[i] - gpxCum[i - 1]) || 1);
+    return [
+      pts[i - 1].lat + (pts[i].lat - pts[i - 1].lat) * f,
+      pts[i - 1].lng + (pts[i].lng - pts[i - 1].lng) * f
+    ];
+  }
+
+  // Reads the GPX file directly (no plugin needed)
+  async function loadGpxTrack() {
+    const status = document.getElementById("gps-status");
+    for (const name of ['carn1.gpx', 'carn.gpx']) {
+      try {
+        const res = await fetch(name, { cache: 'no-cache' });
+        if (!res.ok) continue;
+        const text = (await res.text()).replace(/^\uFEFF/, '');
+        const xml = new DOMParser().parseFromString(text, 'application/xml');
+        const pts = [];
+        Array.from(xml.getElementsByTagName('trkpt')).forEach(n => {
+          const lat = parseFloat(n.getAttribute('lat'));
+          const lng = parseFloat(n.getAttribute('lon'));
+          if (!isNaN(lat) && !isNaN(lng)) pts.push(L.latLng(lat, lng));
+        });
+        if (pts.length > 1) {
+          gpxCoordinates = pts;
+          gpxCum = [];
+          const line = L.polyline(pts, { color: '#ffcc00', weight: 6, opacity: 0.8 }).addTo(map);
+          map.fitBounds(line.getBounds());
+          updateCabDisplay(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("Could not read " + name, err);
+      }
+    }
+    status.innerText = "TRACK NOT FOUND";
+    status.className = "status-badge status-offline";
+  }
+
   function initMap() {
-    // If the map library didn't load, the cab card still works
-    if (typeof L === 'undefined') {
-      console.warn("Leaflet did not load - running without map.");
+    if (typeof L === 'undefined') {            // map library failed: cab card still works
       updateCabDisplay(false);
       return;
     }
-
     map = L.map('map', { zoomControl: false }).setView([54.453905, -6.410553], 15);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap'
     }).addTo(map);
-
-    // Marker is created first so nothing below can stop it existing
     lorryMarker = L.marker([54.453905, -6.410553]).addTo(map);
 
-    try {
-      new L.GPX('carn1.gpx', {
-        async: true,
-        polyline_options: { color: '#ffcc00', weight: 6, opacity: 0.8 },
-        marker_options: { startIcon: null, endIcon: null, wptIcons: {} }
-      }).on('loaded', function (e) {
-        map.fitBounds(e.target.getBounds());
-        e.target.eachLayer(function (layer) {
-          if (layer instanceof L.Polyline) { gpxCoordinates = layer.getLatLngs(); }
-        });
-      }).on('error', function () {
-        console.warn("GPX load failed, continuing without track line.");
-      }).addTo(map);
-    } catch (err) {
-      console.warn("GPX plugin problem:", err);
-    }
-
     setTimeout(() => { map.invalidateSize(); updateCabDisplay(false); }, 300);
+    loadGpxTrack();
   }
 
   function updateCabDisplay(speak = true) {
@@ -657,17 +692,10 @@
     document.getElementById("width-text").innerText = step.width;
     document.getElementById("dist-text").innerText = `${step.totalDist} km`;
 
-    // Only move the marker from route data when NOT using real GPS
+    // Demo/manual mode: place marker on the GPX line. (Real GPS moves it itself.)
     if (!gpsActive && map && lorryMarker) {
-      let pos;
-      if (gpxCoordinates.length > 0) {
-        let pointIdx = Math.floor((currentIndex / (routeCARN1.length - 1)) * (gpxCoordinates.length - 1));
-        pos = gpxCoordinates[pointIdx];
-      } else {
-        pos = [step.lat || 54.453905, step.lng || -6.410553];
-      }
-      lorryMarker.setLatLng(pos);
-      map.panTo(pos);
+      const pos = gpxPosAtKm(stepStartKm(currentIndex));
+      if (pos) { lorryMarker.setLatLng(pos); map.panTo(pos); }
     }
 
     if (voiceEnabled && speak) { speakInstruction(step); }
@@ -684,8 +712,7 @@
   }
 
   function startSimulation() {
-    // Stop real GPS so the two don't fight
-    if (gpsWatchId !== null) {
+    if (gpsWatchId !== null) {                 // stop real GPS so they don't fight
       navigator.geolocation.clearWatch(gpsWatchId);
       gpsWatchId = null;
       gpsActive = false;
@@ -710,7 +737,7 @@
     const status = document.getElementById("gps-status");
 
     if (!window.isSecureContext) {
-      alert("GPS only works when the page is opened over HTTPS, not as a local file or plain http.");
+      alert("GPS only works when the page is opened over HTTPS.");
       return;
     }
     if (!navigator.geolocation) {
@@ -719,11 +746,9 @@
     }
     if (gpsWatchId !== null) navigator.geolocation.clearWatch(gpsWatchId);
 
-    // Spoken from a button tap so phones allow later voice prompts
-    if ('speechSynthesis' in window) {
+    if ('speechSynthesis' in window) {         // spoken from a tap so phones allow voice later
       window.speechSynthesis.speak(new SpeechSynthesisUtterance("GPS drive started."));
     }
-    // Ask the phone to keep the screen on
     if (navigator.wakeLock) navigator.wakeLock.request('screen').catch(() => {});
 
     gpsActive = true;
@@ -733,7 +758,7 @@
     status.className = "status-badge status-online";
 
     gpsWatchId = navigator.geolocation.watchPosition(pos => {
-      if (pos.coords.accuracy > 30) return;            // ignore poor fixes
+      if (pos.coords.accuracy > 30) return;    // ignore poor fixes
       const uLat = pos.coords.latitude, uLng = pos.coords.longitude;
 
       if (map && lorryMarker) {
@@ -743,7 +768,7 @@
 
       if (lastFix) {
         const d = getDistanceMeters(lastFix.lat, lastFix.lng, uLat, uLng) / 1000;
-        if (d < 0.005) return;                          // ignore jitter under 5 m
+        if (d < 0.005) return;                 // ignore jitter under 5 m
         travelledKm += d;
       }
       lastFix = { lat: uLat, lng: uLng };
@@ -762,34 +787,6 @@
       status.className = "status-badge status-offline";
       if (err.code === 1) alert("Please allow Location access in your browser settings.");
     }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
-  }
-      // Position along the GPX line for a given route distance (km)
-  let gpxFlat = [], gpxCum = [];
-
-  function gpxPosAtKm(km) {
-    const pts = gpxCoordinates.flat(Infinity);
-    if (pts.length < 2) return null;
-
-    if (gpxCum.length !== pts.length) {          // build distances once
-      gpxFlat = pts;
-      gpxCum = [0];
-      for (let i = 1; i < pts.length; i++) {
-        gpxCum.push(gpxCum[i - 1] +
-          getDistanceMeters(pts[i - 1].lat, pts[i - 1].lng, pts[i].lat, pts[i].lng) / 1000);
-      }
-    }
-
-    const total = gpxCum[gpxCum.length - 1];
-    const target = (km / routeCARN1[routeCARN1.length - 1].totalDist) * total;
-    let i = gpxCum.findIndex(c => c >= target);
-    if (i === -1) return [pts[pts.length - 1].lat, pts[pts.length - 1].lng];
-    if (i === 0) return [pts[0].lat, pts[0].lng];
-
-    const f = (target - gpxCum[i - 1]) / ((gpxCum[i] - gpxCum[i - 1]) || 1);
-    return [
-      pts[i - 1].lat + (pts[i].lat - pts[i - 1].lat) * f,
-      pts[i - 1].lng + (pts[i].lng - pts[i - 1].lng) * f
-    ];
   }
 </script>
 </body>
