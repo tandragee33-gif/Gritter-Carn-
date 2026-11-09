@@ -599,5 +599,175 @@
       initMap();
     };
   </script>
+  <script>
+  // ===== GPS FIX: paste above </body>. Your route data is not touched. =====
+
+  const LEAD_KM = 0.10;   // announce each step this far before it starts (0.10 = 100 m)
+  let gpsWatchId = null, gpsActive = false, lastFix = null, travelledKm = 0;
+
+  // Step N starts where step N-1 ended (its totalDist)
+  function stepStartKm(i) { return i === 0 ? 0 : routeCARN1[i - 1].totalDist; }
+
+  function initMap() {
+    // If the map library didn't load, the cab card still works
+    if (typeof L === 'undefined') {
+      console.warn("Leaflet did not load - running without map.");
+      updateCabDisplay(false);
+      return;
+    }
+
+    map = L.map('map', { zoomControl: false }).setView([54.453905, -6.410553], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    // Marker is created first so nothing below can stop it existing
+    lorryMarker = L.marker([54.453905, -6.410553]).addTo(map);
+
+    try {
+      new L.GPX('carn1.gpx', {
+        async: true,
+        polyline_options: { color: '#ffcc00', weight: 6, opacity: 0.8 },
+        marker_options: { startIcon: null, endIcon: null, wptIcons: {} }
+      }).on('loaded', function (e) {
+        map.fitBounds(e.target.getBounds());
+        e.target.eachLayer(function (layer) {
+          if (layer instanceof L.Polyline) { gpxCoordinates = layer.getLatLngs(); }
+        });
+      }).on('error', function () {
+        console.warn("GPX load failed, continuing without track line.");
+      }).addTo(map);
+    } catch (err) {
+      console.warn("GPX plugin problem:", err);
+    }
+
+    setTimeout(() => { map.invalidateSize(); updateCabDisplay(false); }, 300);
+  }
+
+  function updateCabDisplay(speak = true) {
+    const step = routeCARN1[currentIndex];
+
+    const banner = document.getElementById("mode-banner");
+    if (step.mode === "SALT") {
+      banner.innerText = `⚠️ SPREAD SALT (${step.width}m)`;
+      banner.className = "mode-banner mode-salt";
+    } else {
+      banner.innerText = "🟢 TRAVEL - NO SPREAD";
+      banner.className = "mode-banner mode-travel";
+    }
+
+    document.getElementById("street-name").innerText = step.street;
+    document.getElementById("dir-text").innerText = step.dir;
+    document.getElementById("width-text").innerText = step.width;
+    document.getElementById("dist-text").innerText = `${step.totalDist} km`;
+
+    // Only move the marker from route data when NOT using real GPS
+    if (!gpsActive && map && lorryMarker) {
+      let pos;
+      if (gpxCoordinates.length > 0) {
+        let pointIdx = Math.floor((currentIndex / (routeCARN1.length - 1)) * (gpxCoordinates.length - 1));
+        pos = gpxCoordinates[pointIdx];
+      } else {
+        pos = [step.lat || 54.453905, step.lng || -6.410553];
+      }
+      lorryMarker.setLatLng(pos);
+      map.panTo(pos);
+    }
+
+    if (voiceEnabled && speak) { speakInstruction(step); }
+  }
+
+  function manualNextStep() {
+    if (currentIndex < routeCARN1.length - 1) {
+      currentIndex++;
+      if (gpsActive) travelledKm = stepStartKm(currentIndex);   // resync distance
+      updateCabDisplay(true);
+    } else {
+      alert("Route completed!");
+    }
+  }
+
+  function startSimulation() {
+    // Stop real GPS so the two don't fight
+    if (gpsWatchId !== null) {
+      navigator.geolocation.clearWatch(gpsWatchId);
+      gpsWatchId = null;
+      gpsActive = false;
+    }
+    if (simulationInterval) clearInterval(simulationInterval);
+    currentIndex = 0;
+    updateCabDisplay(true);
+
+    simulationInterval = setInterval(() => {
+      if (currentIndex < routeCARN1.length - 1) {
+        currentIndex++;
+        updateCabDisplay(true);
+      } else {
+        clearInterval(simulationInterval);
+        alert("Simulation finished!");
+      }
+    }, 5500);
+  }
+
+  function startNavigation() {
+    if (simulationInterval) clearInterval(simulationInterval);
+    const status = document.getElementById("gps-status");
+
+    if (!window.isSecureContext) {
+      alert("GPS only works when the page is opened over HTTPS, not as a local file or plain http.");
+      return;
+    }
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by this browser.");
+      return;
+    }
+    if (gpsWatchId !== null) navigator.geolocation.clearWatch(gpsWatchId);
+
+    // Spoken from a button tap so phones allow later voice prompts
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance("GPS drive started."));
+    }
+    // Ask the phone to keep the screen on
+    if (navigator.wakeLock) navigator.wakeLock.request('screen').catch(() => {});
+
+    gpsActive = true;
+    lastFix = null;
+    travelledKm = stepStartKm(currentIndex);
+    status.innerText = "WAITING FOR GPS";
+    status.className = "status-badge status-online";
+
+    gpsWatchId = navigator.geolocation.watchPosition(pos => {
+      if (pos.coords.accuracy > 30) return;            // ignore poor fixes
+      const uLat = pos.coords.latitude, uLng = pos.coords.longitude;
+
+      if (map && lorryMarker) {
+        lorryMarker.setLatLng([uLat, uLng]);
+        map.panTo([uLat, uLng]);
+      }
+
+      if (lastFix) {
+        const d = getDistanceMeters(lastFix.lat, lastFix.lng, uLat, uLng) / 1000;
+        if (d < 0.005) return;                          // ignore jitter under 5 m
+        travelledKm += d;
+      }
+      lastFix = { lat: uLat, lng: uLng };
+
+      status.innerText = `GPS ${travelledKm.toFixed(2)} km`;
+      status.className = "status-badge status-online";
+
+      if (currentIndex < routeCARN1.length - 1 &&
+          travelledKm >= stepStartKm(currentIndex + 1) - LEAD_KM) {
+        currentIndex++;
+        updateCabDisplay(true);
+      }
+    }, err => {
+      const msgs = { 1: "GPS BLOCKED", 2: "NO GPS SIGNAL", 3: "GPS WAITING..." };
+      status.innerText = msgs[err.code] || "GPS ERROR";
+      status.className = "status-badge status-offline";
+      if (err.code === 1) alert("Please allow Location access in your browser settings.");
+    }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
+  }
+</script>
 </body>
 </html>
