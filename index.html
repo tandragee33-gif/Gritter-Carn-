@@ -726,6 +726,37 @@
   }
 
   buildRoutePicker();
+      // ===== SPLASH SCREEN =====
+  function showSplash() {
+    const splash = document.createElement('div');
+    splash.style.cssText = 'position:fixed;inset:0;z-index:10000;background:#121212;color:#fff;' +
+      'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+      'gap:16px;padding:20px;text-align:center;';
+    splash.innerHTML =
+      '<div style="font-size:26px;font-weight:bold;color:#ffcc00;letter-spacing:1px">GRITTER NAVIGATOR</div>' +
+      '<img id="splash-img" src="gritter.jpg" alt="Gritter" ' +
+        'style="max-width:100%;max-height:45vh;border-radius:12px;border:3px solid #ffcc00">' +
+      '<div id="splash-fallback" style="display:none;font-size:90px">🚛</div>' +
+      '<div style="color:#ccc">Hands-free route guide</div>' +
+      '<button id="splash-go" style="font-size:20px;font-weight:bold;padding:18px 40px;' +
+        'border:none;border-radius:10px;background:#ffaa00;color:#000">CONTINUE</button>';
+    document.body.appendChild(splash);
+
+    // If the picture can't be found, show a lorry symbol instead
+    splash.querySelector('#splash-img').onerror = function () {
+      this.style.display = 'none';
+      splash.querySelector('#splash-fallback').style.display = 'block';
+    };
+
+    splash.querySelector('#splash-go').onclick = () => {
+      splash.remove();
+      const routeBtn = Array.from(document.querySelectorAll('header button'))
+                            .find(b => b.textContent.includes('ROUTE'));
+      if (routeBtn) routeBtn.click();          // opens the depot and route screen
+    };
+  }
+
+  showSplash();
 </script>
 
   <script> 
