@@ -1,0 +1,11 @@
+{
+  "depots": [
+    {
+      "name": "Carn",
+      "routes": [
+        { "name": "CARN1", "builtin": true },
+        { "name": "CARN2", "file": "routes/carn2.csv" }
+      ]
+    }
+  ]
+}
