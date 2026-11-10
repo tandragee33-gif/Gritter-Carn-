@@ -593,6 +593,139 @@
     window.onload = function() {
       initMap();
     };
+      // ===== MULTI-ROUTE ADD-ON =====
+  const builtinRoute = routeCARN1.slice();          // keeps your original CARN1 safe
+  const KNOWN_DIRS = ['TL', 'TR', 'RAB', 'SA', 'TURN', 'RAB TL'];
+
+  // Reads a typed route file (CSV). Refuses lines with mistakes rather than loading a wrong route.
+  function parseRouteCsv(text) {
+    const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/);
+    const steps = [], bad = [];
+    let total = 0;
+    lines.forEach((raw, n) => {
+      const line = raw.trim();
+      if (!line || line.startsWith('#')) return;
+      const c = line.split(',').map(s => s.trim());
+      if (n === 0 && isNaN(parseInt(c[0], 10))) return;          // header row
+      const dist = parseFloat(c[5]);
+      const mode = (c[1] || '').toUpperCase();
+      const dir = (c[4] || '').toUpperCase();
+      const width = parseFloat(c[3]);
+      const ok = c.length >= 6 && !isNaN(dist) && c[2] &&
+                 (mode === 'SALT' || mode === 'TRAVEL') && KNOWN_DIRS.includes(dir) &&
+                 (mode === 'TRAVEL' || !isNaN(width));
+      if (!ok) { bad.push(n + 1); return; }
+      total = Math.round((total + dist) * 100) / 100;
+      steps.push({
+        seq: parseInt(c[0], 10) || steps.length + 1, mode, street: c[2].toUpperCase(),
+        width: mode === 'SALT' ? width : 'N/A', dir, distance: dist, totalDist: total
+      });
+    });
+    return { steps, bad };
+  }
+
+  async function loadRoute(route) {
+    let steps;
+    if (route.builtin) {
+      steps = builtinRoute.slice();
+    } else {
+      const res = await fetch(route.file, { cache: 'no-cache' });
+      if (!res.ok) throw new Error('Could not find ' + route.file);
+      const parsed = parseRouteCsv(await res.text());
+      if (parsed.bad.length) {
+        throw new Error('NOT LOADED. Check these line numbers in ' + route.file + ': ' +
+                        parsed.bad.slice(0, 10).join(', '));
+      }
+      if (parsed.steps.length < 2) throw new Error('No steps found in ' + route.file);
+      steps = parsed.steps;
+    }
+
+    // Stop anything running, then swap the route in place
+    if (simulationInterval) clearInterval(simulationInterval);
+    if (gpsWatchId !== null) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
+    gpsActive = false; lastFix = null; travelledKm = 0; currentIndex = 0;
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+    routeCARN1.length = 0;
+    steps.forEach(s => routeCARN1.push(s));
+
+    document.querySelector('header h1').innerText =
+      `Route ${route.name} (${steps[steps.length - 1].totalDist} km)`;
+    const status = document.getElementById("gps-status");
+    status.innerText = "READY";
+    status.className = "status-badge status-online";
+
+    // Remove any yellow line; only CARN1 has a track file
+    if (typeof L !== 'undefined' && map) {
+      map.eachLayer(l => { if (l instanceof L.Polyline) map.removeLayer(l); });
+    }
+    gpxCoordinates = []; gpxCum = [];
+    if (route.builtin) loadGpxTrack();
+    updateCabDisplay(false);
+
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance("Route " + route.name + " loaded."));
+    }
+  }
+
+  function buildRoutePicker() {
+    const btn = document.createElement('button');
+    btn.textContent = '📂 ROUTE';
+    btn.style.cssText = 'background:#ffcc00;color:#000;border:none;border-radius:6px;padding:8px 12px;font-weight:bold;';
+    document.querySelector('header').insertBefore(btn, document.getElementById('gps-status'));
+
+    const box = document.createElement('div');
+    box.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9999;' +
+                        'padding:20px;color:#fff;flex-direction:column;gap:12px;justify-content:center;';
+    const sel = 'font-size:18px;padding:12px;';
+    const bt = 'font-size:16px;font-weight:bold;padding:14px;border:none;border-radius:8px;';
+    box.innerHTML =
+      '<h2 style="color:#ffcc00;margin:0">Choose route</h2>' +
+      '<label>Depot</label><select id="depot-select" style="' + sel + '"></select>' +
+      '<label>Route</label><select id="route-select" style="' + sel + '"></select>' +
+      '<button id="route-load" style="' + bt + 'background:#2e7d32;color:#fff">LOAD ROUTE</button>' +
+      '<button id="route-cancel" style="' + bt + 'background:#555;color:#fff">CANCEL</button>' +
+      '<div id="route-msg" style="color:#ff8080;white-space:pre-wrap"></div>';
+    document.body.appendChild(box);
+
+    const depotSel = box.querySelector('#depot-select');
+    const routeSel = box.querySelector('#route-select');
+    const msg = box.querySelector('#route-msg');
+    let catalogue = null;
+
+    function fillRoutes() {
+      const d = catalogue.depots[depotSel.value];
+      routeSel.innerHTML = d.routes.map((r, i) => `<option value="${i}">${r.name}</option>`).join('');
+    }
+
+    btn.onclick = async () => {
+      msg.innerText = '';
+      try {
+        if (!catalogue) {
+          const res = await fetch('routes.json', { cache: 'no-cache' });
+          if (!res.ok) throw new Error('Could not find routes.json');
+          catalogue = await res.json();
+          depotSel.innerHTML = catalogue.depots.map((d, i) => `<option value="${i}">${d.name}</option>`).join('');
+          depotSel.onchange = fillRoutes;
+          fillRoutes();
+        }
+      } catch (err) { msg.innerText = err.message; }
+      box.style.display = 'flex';
+    };
+
+    box.querySelector('#route-cancel').onclick = () => { box.style.display = 'none'; };
+    box.querySelector('#route-load').onclick = async () => {
+      if (!catalogue) return;
+      msg.innerText = '';
+      try {
+        const d = catalogue.depots[depotSel.value];
+        await loadRoute(d.routes[routeSel.value]);
+        box.style.display = 'none';
+      } catch (err) { msg.innerText = err.message; }
+    };
+  }
+
+  buildRoutePicker();
 </script>
 
   <script> 
