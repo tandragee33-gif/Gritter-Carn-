@@ -757,7 +757,7 @@
   }
 
   showSplash();
-   // ===== SMOOTH NORTH-UP MAP + DIRECTION ARROW =====
+  // ===== SMOOTH NORTH-UP MAP + DIRECTION ARROW (v2) =====
   const POSITION_LAG_S = 0.35;   // seconds the map takes to catch up with you (bigger = smoother, slower)
   const TURN_LAG_S = 0.5;        // seconds the arrow takes to turn (bigger = calmer)
   const TURN_DEADZONE = 6;       // degrees: wobbles smaller than this are ignored
@@ -767,6 +767,7 @@
 
   let shownHeading = 0, headTarget = 0, headRef = null;
   let fix = null, disp = null, lastFrame = 0, realSetLatLng = null;
+  let trkCum = [], trkPts = null;
   const mapInner = document.getElementById('map');
   const mapFrame = document.createElement('div');
 
@@ -795,28 +796,42 @@
   const angleDiff = (a, b) => (((a - b) % 360) + 540) % 360 - 180;
   function pointArrow(deg) { headTarget = deg; shownHeading = deg; }
 
-  // Direction of the GPX track at a given distance along the route
-  function gpxPointAt(t) {                      // t = km along the GPX line itself
+  // --- Direction of the GPX track at a given distance along the route ---
+  function trackReady() {
     const pts = gpxCoordinates;
-    t = Math.max(0, Math.min(t, gpxCum[gpxCum.length - 1]));
-    const i = gpxCum.findIndex(c => c >= t);
-    if (i < 1) return pts[0];
-    const f = (t - gpxCum[i - 1]) / ((gpxCum[i] - gpxCum[i - 1]) || 1);
+    if (!pts || pts.length < 2) return false;
+    if (trkPts !== pts) {                        // work out the track distances once per loaded track
+      trkPts = pts;
+      trkCum = [0];
+      for (let i = 1; i < pts.length; i++) {
+        trkCum.push(trkCum[i - 1] +
+          getDistanceMeters(pts[i - 1].lat, pts[i - 1].lng, pts[i].lat, pts[i].lng) / 1000);
+      }
+    }
+    return true;
+  }
+  function trackPointAt(km) {
+    const pts = gpxCoordinates;
+    km = Math.max(0, Math.min(km, trkCum[trkCum.length - 1]));
+    let i = trkCum.findIndex(c => c >= km);
+    if (i < 1) return { lat: pts[0].lat, lng: pts[0].lng };
+    const f = (km - trkCum[i - 1]) / ((trkCum[i] - trkCum[i - 1]) || 1);
     return { lat: pts[i - 1].lat + (pts[i].lat - pts[i - 1].lat) * f,
              lng: pts[i - 1].lng + (pts[i].lng - pts[i - 1].lng) * f };
   }
-  function gpxHeadingAtKm(km) {
-    if (!gpxCoordinates || gpxCoordinates.length < 2) return null;
-    gpxPosAtKm(0);                              // makes sure the track distances are worked out
-    const total = gpxCum[gpxCum.length - 1];
-    const t = Math.min(1, km / routeCARN1[routeCARN1.length - 1].totalDist) * total;
-    return bearingDeg(gpxPointAt(t - 0.03), gpxPointAt(t + 0.03));   // 30 m either side
+  function trackHeadingAtRouteKm(routeKm) {
+    if (!trackReady()) return null;
+    const total = trkCum[trkCum.length - 1];
+    const frac = Math.min(1, Math.max(0, routeKm / routeCARN1[routeCARN1.length - 1].totalDist));
+    const a = trackPointAt(frac * total - 0.05), b = trackPointAt(frac * total + 0.05);   // 50 m either side
+    if (a.lat === b.lat && a.lng === b.lng) return null;
+    return bearingDeg(a, b);
   }
 
-  // Called every time a new position arrives (GPS or demo)
+  // Called every time a new position arrives (GPS, Test Demo or Next Step)
   function onFix(ll) {
     const now = performance.now();
-    let vLat = 0, vLng = 0;                     // speed in degrees per second
+    let vLat = 0, vLng = 0;                      // speed in degrees per second
     if (fix) {
       const dt = (now - fix.t) / 1000;
       if (dt > 0.2 && dt < 5) {
@@ -826,12 +841,17 @@
     }
     fix = { lat: ll.lat, lng: ll.lng, t: now, vLat, vLng };
 
-    if (!gpsActive) return;                     // in Test Demo the arrow follows the track instead
+    if (!gpsActive) {                            // Test Demo / Next Step: point along the track
+      const h = trackHeadingAtRouteKm(stepStartKm(currentIndex));
+      if (h !== null && isFinite(h)) pointArrow(h);
+      return;
+    }
+    // GPS Drive: point the way you are really moving
     if (!headRef) { headRef = { lat: ll.lat, lng: ll.lng }; return; }
     const moved = getDistanceMeters(headRef.lat, headRef.lng, ll.lat, ll.lng);
-    if (moved < MIN_MOVE_M) return;             // standing still or crawling
+    if (moved < MIN_MOVE_M) return;              // standing still or crawling
     const b = bearingDeg(headRef, ll);
-    if (moved > 100) pointArrow(b);             // big jump: turn at once
+    if (moved > 100) pointArrow(b);              // big jump: turn at once
     else if (Math.abs(angleDiff(b, headTarget)) >= TURN_DEADZONE) headTarget = b;
     headRef = { lat: ll.lat, lng: ll.lng };
   }
@@ -854,7 +874,8 @@
     disp.lat += (tLat - disp.lat) * k;
     disp.lng += (tLng - disp.lng) * k;
 
-    // Turn the arrow smoothly
+    // Turn the arrow smoothly (and never let it freeze on a bad number)
+    if (!isFinite(shownHeading) || !isFinite(headTarget)) { shownHeading = 0; headTarget = 0; }
     shownHeading += angleDiff(headTarget, shownHeading) * (1 - Math.exp(-dt / TURN_LAG_S));
 
     // Move the arrow, then keep the map centred on it
@@ -896,11 +917,17 @@
   startNavigation = function () {
     origStartNavigation.apply(this, arguments);
     headRef = null;
-    const h = gpxHeadingAtKm(stepStartKm(currentIndex));
-    if (h !== null) pointArrow(h);
+    const h = trackHeadingAtRouteKm(stepStartKm(currentIndex));
+    if (h !== null && isFinite(h)) pointArrow(h);
     if (map) map.setZoom(DRIVE_ZOOM);
   };
 
+  // Test Demo: zoom in as well
+  const origStartSimulation = startSimulation;
+  startSimulation = function () {
+    origStartSimulation.apply(this, arguments);
+    if (map) map.setZoom(DRIVE_ZOOM);
+  };
   // Test Demo: zoom in as well
   const origStartSimulation = startSimulation;
   startSimulation = function () {
