@@ -757,16 +757,25 @@
   }
 
   showSplash();
-      // ===== HEADING-UP MAP =====
+  // ===== HEADING-UP MAP (smooth, Google Maps style) =====
+  const MAP_BOTTOM_BIAS = 0.70;   // arrow sits 70% of the way down, so you see more road ahead
+  const TURN_DEADZONE = 6;        // degrees: wobbles smaller than this are ignored
+  const TURN_SMOOTHING = 0.5;     // 1 = turn straight away, lower = slower and smoother
+  const MIN_MOVE_M = 15;          // metres you must move before the direction is recalculated
+  const DRIVE_ZOOM = 16;          // map zoom when GPS Drive starts (15 = wider, 17 = closer)
+
   let headingUp = true, shownHeading = 0, headRef = null;
   const rotDiv = document.getElementById('map');
   const rotWrap = document.createElement('div');
 
   // The map is made bigger than its frame so no corners show when it turns
   function sizeRotMap() {
-    const d = Math.ceil(Math.hypot(rotWrap.clientWidth, rotWrap.clientHeight)) + 20;
+    const w = rotWrap.clientWidth, h = rotWrap.clientHeight;
+    const reach = Math.hypot(w / 2, h * Math.max(MAP_BOTTOM_BIAS, 1 - MAP_BOTTOM_BIAS));
+    const d = Math.ceil(2 * reach) + 20;
     rotDiv.style.width = d + 'px';
     rotDiv.style.height = d + 'px';
+    rotDiv.style.top = (MAP_BOTTOM_BIAS * 100) + '%';
     if (map) map.invalidateSize();
   }
 
@@ -774,10 +783,15 @@
     'border:2px solid #ffcc00;border-radius:10px;margin-bottom:8px;background:#222;';
   rotDiv.parentNode.insertBefore(rotWrap, rotDiv);
   rotWrap.appendChild(rotDiv);
-  rotDiv.style.cssText = 'position:absolute;left:50%;top:50%;margin:0;border:none;border-radius:0;' +
-    'transform-origin:center center;transform:translate(-50%,-50%) rotate(0deg);transition:transform 0.6s linear;';
+  rotDiv.style.cssText = 'position:absolute;left:50%;margin:0;border:none;border-radius:0;' +
+    'transform-origin:center center;transform:translate(-50%,-50%) rotate(0deg);transition:transform 1s linear;';
   sizeRotMap();
   window.addEventListener('resize', sizeRotMap);
+
+  // Smooth gliding: the map slides under the arrow instead of jumping
+  const glideStyle = document.createElement('style');
+  glideStyle.textContent = '.leaflet-map-pane, .leaflet-marker-icon { transition: transform 1s linear; }';
+  document.head.appendChild(glideStyle);
 
   function bearingDeg(a, b) {
     const r = x => x * Math.PI / 180;
@@ -794,26 +808,28 @@
     if (arrow) arrow.style.transform = `rotate(${shownHeading - mapAngle}deg)`;
   }
 
-  function setHeading(target) {
+  function setHeading(target, amount) {
     const diff = (((target - shownHeading) % 360) + 540) % 360 - 180;   // shortest way round
-    shownHeading += diff;
+    if (Math.abs(diff) < TURN_DEADZONE && amount < 1) return;            // ignore small wobbles
+    shownHeading += diff * amount;
     applyRotation();
   }
 
-  // Works out the direction of travel from the last two positions
+  // Works out the direction of travel from your recent positions
   function onMarkerMoved(prev, cur) {
     if (!headRef) { headRef = cur; return; }
-    if (getDistanceMeters(headRef.lat, headRef.lng, cur.lat, cur.lng) < 8) return;   // ignore standing still
-    setHeading(bearingDeg(headRef, cur));
+    const moved = getDistanceMeters(headRef.lat, headRef.lng, cur.lat, cur.lng);
+    if (moved < MIN_MOVE_M) return;                                      // standing still or crawling
+    setHeading(bearingDeg(headRef, cur), moved > 100 ? 1 : TURN_SMOOTHING);
     headRef = cur;
   }
 
   window.addEventListener('load', () => {
     if (!lorryMarker) return;
-    // Replace the blue pin with a yellow arrow
+    // Yellow arrow instead of the blue pin
     lorryMarker.setIcon(L.divIcon({
       className: '', iconSize: [44, 44], iconAnchor: [22, 22],
-      html: '<div id="lorry-arrow" style="width:44px;height:44px;transition:transform 0.6s linear">' +
+      html: '<div id="lorry-arrow" style="width:44px;height:44px;transition:transform 1s linear">' +
             '<svg viewBox="0 0 44 44" width="44" height="44"><polygon points="22,3 38,40 22,31 6,40" ' +
             'fill="#ffcc00" stroke="#000" stroke-width="3" stroke-linejoin="round"/></svg></div>'
     }));
@@ -825,8 +841,21 @@
       onMarkerMoved(prev, this.getLatLng());
       return this;
     };
+    // Re-centre the map without its own jumpy animation (the gliding is done above)
+    map.panTo = function (c) {
+      const p = this.latLngToContainerPoint(c);
+      this.panBy(p.subtract(this.getSize().divideBy(2)), { animate: false });
+      return this;
+    };
     applyRotation();
   });
+
+  // Zoom in when GPS Drive starts
+  const origStartNavigation = startNavigation;
+  startNavigation = function () {
+    origStartNavigation.apply(this, arguments);
+    if (map) map.setZoom(DRIVE_ZOOM);
+  };
 
   // Button to switch between heading-up and north-up
   const headBtn = document.createElement('button');
@@ -834,7 +863,7 @@
   headBtn.style.cssText = 'background:#ffcc00;color:#000;border:none;border-radius:6px;padding:8px 12px;font-weight:bold;';
   headBtn.onclick = () => {
     headingUp = !headingUp;
-    shownHeading = ((shownHeading % 360) + 540) % 360 - 180 + 0;   // keep the angle small
+    shownHeading = ((shownHeading % 360) + 540) % 360 - 180;   // keep the angle small
     headBtn.textContent = headingUp ? '🧭 HEADING UP' : '🧭 NORTH UP';
     applyRotation();
   };
