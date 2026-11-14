@@ -705,7 +705,7 @@
           const res = await fetch('routes.json', { cache: 'no-cache' });
           if (!res.ok) throw new Error('Could not find routes.json');
           catalogue = await res.json();
-          depotSel.innerHTML = catalogue.depots.map((d, i) => `<option value="i">{d.name}</option>`).join('');
+          depotSel.innerHTML = catalogue.depots.map((d, i) => `<option value="i">{route 1}</option>`).join('');
           depotSel.onchange = fillRoutes;
           fillRoutes();
         }
