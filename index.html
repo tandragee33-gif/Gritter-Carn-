@@ -924,7 +924,7 @@
     status.className = "status-badge status-online";
 
     gpsWatchId = navigator.geolocation.watchPosition(pos => {
-      if (pos.coords.accuracy > 30) return;    // ignore poor fixes
+      if (pos.coords.accuracy > 50) return;    // ignore poor fixes
       const uLat = pos.coords.latitude, uLng = pos.coords.longitude;
 
       if (map && lorryMarker) {
@@ -942,11 +942,14 @@
       status.innerText = `GPS ${travelledKm.toFixed(2)} km`;
       status.className = "status-badge status-online";
 
-      if (currentIndex < routeCARN1.length - 1 &&
-          travelledKm >= stepStartKm(currentIndex + 1) - LEAD_KM) {
+      // Catch up if several steps were passed since the last reading, then announce only the latest
+      let moved = false;
+      while (currentIndex < routeCARN1.length - 1 &&
+             travelledKm >= stepStartKm(currentIndex + 1) - LEAD_KM) {
         currentIndex++;
-        updateCabDisplay(true);
+        moved = true;
       }
+      if (moved) updateCabDisplay(true);
     }, err => {
       const msgs = { 1: "GPS BLOCKED", 2: "NO GPS SIGNAL", 3: "GPS WAITING..." };
       status.innerText = msgs[err.code] || "GPS ERROR";
