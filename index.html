@@ -757,6 +757,88 @@
   }
 
   showSplash();
+      // ===== HEADING-UP MAP =====
+  let headingUp = true, shownHeading = 0, headRef = null;
+  const rotDiv = document.getElementById('map');
+  const rotWrap = document.createElement('div');
+
+  // The map is made bigger than its frame so no corners show when it turns
+  function sizeRotMap() {
+    const d = Math.ceil(Math.hypot(rotWrap.clientWidth, rotWrap.clientHeight)) + 20;
+    rotDiv.style.width = d + 'px';
+    rotDiv.style.height = d + 'px';
+    if (map) map.invalidateSize();
+  }
+
+  rotWrap.style.cssText = 'position:relative;flex:none;width:100%;height:35vh;overflow:hidden;' +
+    'border:2px solid #ffcc00;border-radius:10px;margin-bottom:8px;background:#222;';
+  rotDiv.parentNode.insertBefore(rotWrap, rotDiv);
+  rotWrap.appendChild(rotDiv);
+  rotDiv.style.cssText = 'position:absolute;left:50%;top:50%;margin:0;border:none;border-radius:0;' +
+    'transform-origin:center center;transform:translate(-50%,-50%) rotate(0deg);transition:transform 0.6s linear;';
+  sizeRotMap();
+  window.addEventListener('resize', sizeRotMap);
+
+  function bearingDeg(a, b) {
+    const r = x => x * Math.PI / 180;
+    const y = Math.sin(r(b.lng - a.lng)) * Math.cos(r(b.lat));
+    const x = Math.cos(r(a.lat)) * Math.sin(r(b.lat)) -
+              Math.sin(r(a.lat)) * Math.cos(r(b.lat)) * Math.cos(r(b.lng - a.lng));
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  }
+
+  function applyRotation() {
+    const mapAngle = headingUp ? shownHeading : 0;
+    rotDiv.style.transform = `translate(-50%,-50%) rotate(${-mapAngle}deg)`;
+    const arrow = document.getElementById('lorry-arrow');
+    if (arrow) arrow.style.transform = `rotate(${shownHeading - mapAngle}deg)`;
+  }
+
+  function setHeading(target) {
+    const diff = (((target - shownHeading) % 360) + 540) % 360 - 180;   // shortest way round
+    shownHeading += diff;
+    applyRotation();
+  }
+
+  // Works out the direction of travel from the last two positions
+  function onMarkerMoved(prev, cur) {
+    if (!headRef) { headRef = cur; return; }
+    if (getDistanceMeters(headRef.lat, headRef.lng, cur.lat, cur.lng) < 8) return;   // ignore standing still
+    setHeading(bearingDeg(headRef, cur));
+    headRef = cur;
+  }
+
+  window.addEventListener('load', () => {
+    if (!lorryMarker) return;
+    // Replace the blue pin with a yellow arrow
+    lorryMarker.setIcon(L.divIcon({
+      className: '', iconSize: [44, 44], iconAnchor: [22, 22],
+      html: '<div id="lorry-arrow" style="width:44px;height:44px;transition:transform 0.6s linear">' +
+            '<svg viewBox="0 0 44 44" width="44" height="44"><polygon points="22,3 38,40 22,31 6,40" ' +
+            'fill="#ffcc00" stroke="#000" stroke-width="3" stroke-linejoin="round"/></svg></div>'
+    }));
+    // Every time the marker moves (GPS or demo), update the heading
+    const origSet = lorryMarker.setLatLng;
+    lorryMarker.setLatLng = function (ll) {
+      const prev = this.getLatLng();
+      origSet.call(this, ll);
+      onMarkerMoved(prev, this.getLatLng());
+      return this;
+    };
+    applyRotation();
+  });
+
+  // Button to switch between heading-up and north-up
+  const headBtn = document.createElement('button');
+  headBtn.textContent = '🧭 HEADING UP';
+  headBtn.style.cssText = 'background:#ffcc00;color:#000;border:none;border-radius:6px;padding:8px 12px;font-weight:bold;';
+  headBtn.onclick = () => {
+    headingUp = !headingUp;
+    shownHeading = ((shownHeading % 360) + 540) % 360 - 180 + 0;   // keep the angle small
+    headBtn.textContent = headingUp ? '🧭 HEADING UP' : '🧭 NORTH UP';
+    applyRotation();
+  };
+  document.querySelector('header').insertBefore(headBtn, document.getElementById('gps-status'));
 </script>
 
   <script> 
