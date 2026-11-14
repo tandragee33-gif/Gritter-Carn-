@@ -757,21 +757,24 @@
   }
 
   showSplash();
-  // ===== HEADING-UP MAP (smooth, Google Maps style) =====
-  const MAP_BOTTOM_BIAS = 0.70;   // arrow sits 70% of the way down, so you see more road ahead
+  // ===== SMOOTH HEADING-UP MAP (continuous, Google Maps style) =====
+  const MAP_BOTTOM_BIAS = 0.70;   // arrow sits 70% of the way down the map
+  const POSITION_LAG_S = 0.35;    // seconds the map takes to catch up with you (bigger = smoother, slower)
+  const HEADING_LAG_S = 0.8;      // seconds the map takes to turn (bigger = calmer turning)
   const TURN_DEADZONE = 6;        // degrees: wobbles smaller than this are ignored
-  const TURN_SMOOTHING = 0.5;     // 1 = turn straight away, lower = slower and smoother
   const MIN_MOVE_M = 15;          // metres you must move before the direction is recalculated
+  const MAX_SHIFT = 80;           // pixels the map may drift before it is re-centred
   const DRIVE_ZOOM = 16;          // map zoom when GPS Drive starts (15 = wider, 17 = closer)
 
-  let headingUp = true, shownHeading = 0, headRef = null;
+  let headingUp = true, shownHeading = 0, headTarget = 0, headRef = null;
+  let fix = null, disp = null, lastFrame = 0, realSetLatLng = null;
   const rotDiv = document.getElementById('map');
   const rotWrap = document.createElement('div');
 
-  // The map is made bigger than its frame so no corners show when it turns
+  // The map is made bigger than its frame so no corners show when it turns or drifts
   function sizeRotMap() {
     const w = rotWrap.clientWidth, h = rotWrap.clientHeight;
-    const reach = Math.hypot(w / 2, h * Math.max(MAP_BOTTOM_BIAS, 1 - MAP_BOTTOM_BIAS));
+    const reach = Math.hypot(w / 2, h * Math.max(MAP_BOTTOM_BIAS, 1 - MAP_BOTTOM_BIAS)) + MAX_SHIFT;
     const d = Math.ceil(2 * reach) + 20;
     rotDiv.style.width = d + 'px';
     rotDiv.style.height = d + 'px';
@@ -783,15 +786,10 @@
     'border:2px solid #ffcc00;border-radius:10px;margin-bottom:8px;background:#222;';
   rotDiv.parentNode.insertBefore(rotWrap, rotDiv);
   rotWrap.appendChild(rotDiv);
-  rotDiv.style.cssText = 'position:absolute;left:50%;margin:0;border:none;border-radius:0;' +
-    'transform-origin:center center;transform:translate(-50%,-50%) rotate(0deg);transition:transform 1s linear;';
+  rotDiv.style.cssText = 'position:absolute;left:50%;margin:0;border:none;border-radius:0;will-change:transform;' +
+    'transform-origin:center center;transform:translate(-50%,-50%) rotate(0deg);';
   sizeRotMap();
   window.addEventListener('resize', sizeRotMap);
-
-  // Smooth gliding: the map slides under the arrow instead of jumping
-  const glideStyle = document.createElement('style');
-  glideStyle.textContent = '.leaflet-map-pane, .leaflet-marker-icon { transition: transform 1s linear; }';
-  document.head.appendChild(glideStyle);
 
   function bearingDeg(a, b) {
     const r = x => x * Math.PI / 180;
@@ -801,27 +799,64 @@
     return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
   }
 
-  function applyRotation() {
+  // Called every time a new position arrives (GPS or demo)
+  function onFix(ll) {
+    const now = performance.now();
+    let vLat = 0, vLng = 0;                                  // speed in degrees per second
+    if (fix) {
+      const dt = (now - fix.t) / 1000;
+      if (dt > 0.2 && dt < 5) {
+        vLat = 0.6 * (ll.lat - fix.lat) / dt + 0.4 * fix.vLat;
+        vLng = 0.6 * (ll.lng - fix.lng) / dt + 0.4 * fix.vLng;
+      } else if (dt <= 0.2) { vLat = fix.vLat; vLng = fix.vLng; }
+    }
+    fix = { lat: ll.lat, lng: ll.lng, t: now, vLat, vLng };
+
+    // Direction of travel, from your recent positions
+    if (!headRef) { headRef = { lat: ll.lat, lng: ll.lng }; return; }
+    const moved = getDistanceMeters(headRef.lat, headRef.lng, ll.lat, ll.lng);
+    if (moved < MIN_MOVE_M) return;                           // standing still or crawling
+    const b = bearingDeg(headRef, ll);
+    if (moved > 100) { headTarget = b; shownHeading = b; }    // big jump: turn at once
+    else if (Math.abs((((b - headTarget) % 360) + 540) % 360 - 180) >= TURN_DEADZONE) headTarget = b;
+    headRef = { lat: ll.lat, lng: ll.lng };
+  }
+
+  // Runs about 60 times a second
+  function frame() {
+    requestAnimationFrame(frame);
+    if (!map || !fix || !disp) return;
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - lastFrame) / 1000);
+    lastFrame = now;
+
+    // Where you probably are now: last GPS position plus the travel since then
+    const speed = Math.hypot(fix.vLat * 111320, fix.vLng * 111320 * Math.cos(fix.lat * Math.PI / 180));
+    const age = (speed > 1 && speed < 40) ? Math.min(2.5, (now - fix.t) / 1000) : 0;
+    const tLat = fix.lat + fix.vLat * age, tLng = fix.lng + fix.vLng * age;
+
+    // Glide the shown position towards it (snap if it is a long way off)
+    const k = getDistanceMeters(disp.lat, disp.lng, tLat, tLng) > 300 ? 1 : 1 - Math.exp(-dt / POSITION_LAG_S);
+    disp.lat += (tLat - disp.lat) * k;
+    disp.lng += (tLng - disp.lng) * k;
+
+    // Turn the map smoothly towards your direction of travel
+    const diff = (((headTarget - shownHeading) % 360) + 540) % 360 - 180;
+    shownHeading += diff * (1 - Math.exp(-dt / HEADING_LAG_S));
+
+    // Move the arrow, then keep the map centred on it
+    realSetLatLng.call(lorryMarker, [disp.lat, disp.lng]);
+    const p = map.latLngToContainerPoint([disp.lat, disp.lng]);
+    const c = map.getSize().divideBy(2);
+    let dx = p.x - c.x, dy = p.y - c.y;
+    if (Math.hypot(dx, dy) > MAX_SHIFT) {
+      map.panBy([dx, dy], { animate: false });
+      dx = 0; dy = 0;
+    }
     const mapAngle = headingUp ? shownHeading : 0;
-    rotDiv.style.transform = `translate(-50%,-50%) rotate(${-mapAngle}deg)`;
+    rotDiv.style.transform = `translate(-50%,-50%) rotate(${-mapAngle}deg) translate(${-dx}px,${-dy}px)`;
     const arrow = document.getElementById('lorry-arrow');
     if (arrow) arrow.style.transform = `rotate(${shownHeading - mapAngle}deg)`;
-  }
-
-  function setHeading(target, amount) {
-    const diff = (((target - shownHeading) % 360) + 540) % 360 - 180;   // shortest way round
-    if (Math.abs(diff) < TURN_DEADZONE && amount < 1) return;            // ignore small wobbles
-    shownHeading += diff * amount;
-    applyRotation();
-  }
-
-  // Works out the direction of travel from your recent positions
-  function onMarkerMoved(prev, cur) {
-    if (!headRef) { headRef = cur; return; }
-    const moved = getDistanceMeters(headRef.lat, headRef.lng, cur.lat, cur.lng);
-    if (moved < MIN_MOVE_M) return;                                      // standing still or crawling
-    setHeading(bearingDeg(headRef, cur), moved > 100 ? 1 : TURN_SMOOTHING);
-    headRef = cur;
   }
 
   window.addEventListener('load', () => {
@@ -829,25 +864,19 @@
     // Yellow arrow instead of the blue pin
     lorryMarker.setIcon(L.divIcon({
       className: '', iconSize: [44, 44], iconAnchor: [22, 22],
-      html: '<div id="lorry-arrow" style="width:44px;height:44px;transition:transform 1s linear">' +
+      html: '<div id="lorry-arrow" style="width:44px;height:44px">' +
             '<svg viewBox="0 0 44 44" width="44" height="44"><polygon points="22,3 38,40 22,31 6,40" ' +
             'fill="#ffcc00" stroke="#000" stroke-width="3" stroke-linejoin="round"/></svg></div>'
     }));
-    // Every time the marker moves (GPS or demo), update the heading
-    const origSet = lorryMarker.setLatLng;
-    lorryMarker.setLatLng = function (ll) {
-      const prev = this.getLatLng();
-      origSet.call(this, ll);
-      onMarkerMoved(prev, this.getLatLng());
-      return this;
-    };
-    // Re-centre the map without its own jumpy animation (the gliding is done above)
-    map.panTo = function (c) {
-      const p = this.latLngToContainerPoint(c);
-      this.panBy(p.subtract(this.getSize().divideBy(2)), { animate: false });
-      return this;
-    };
-    applyRotation();
+    realSetLatLng = lorryMarker.setLatLng;
+    const s = lorryMarker.getLatLng();
+    fix = { lat: s.lat, lng: s.lng, t: performance.now(), vLat: 0, vLng: 0 };
+    disp = { lat: s.lat, lng: s.lng };
+    // New positions are now just recorded; the loop above moves the arrow and the map
+    lorryMarker.setLatLng = function (ll) { onFix(L.latLng(ll)); return this; };
+    map.panTo = function () { return this; };
+    lastFrame = performance.now();
+    requestAnimationFrame(frame);
   });
 
   // Zoom in when GPS Drive starts
@@ -863,9 +892,7 @@
   headBtn.style.cssText = 'background:#ffcc00;color:#000;border:none;border-radius:6px;padding:8px 12px;font-weight:bold;';
   headBtn.onclick = () => {
     headingUp = !headingUp;
-    shownHeading = ((shownHeading % 360) + 540) % 360 - 180;   // keep the angle small
     headBtn.textContent = headingUp ? '🧭 HEADING UP' : '🧭 NORTH UP';
-    applyRotation();
   };
   document.querySelector('header').insertBefore(headBtn, document.getElementById('gps-status'));
 </script>
