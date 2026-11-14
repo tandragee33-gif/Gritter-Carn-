@@ -1039,6 +1039,81 @@
       if (err.code === 1) alert("Please allow Location access in your browser settings.");
     }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
   }
+      // ===== COLOUR REPEATED ROADS =====
+  const REPEAT_COLOURS = ['#ffcc00', '#ff7a00', '#00d0ff', '#ff4df0'];
+  const MATCH_M = 18;     // how close (metres) two passes must be to count as the same road
+
+  function colourRepeats() {
+    const pts = gpxCoordinates;
+    if (!map || !pts || pts.length < 2) return;
+
+    // 1. Turn the track into points about 20 m apart, measured in metres
+    const kx = 111320 * Math.cos(pts[0].lat * Math.PI / 180), ky = 111320;
+    const dense = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1];
+      const n = Math.max(1, Math.round(Math.hypot((b.lng - a.lng) * kx, (b.lat - a.lat) * ky) / 20));
+      for (let k = 0; k < n; k++) {
+        const lat = a.lat + (b.lat - a.lat) * k / n, lng = a.lng + (b.lng - a.lng) * k / n;
+        dense.push({ lat, lng, x: lng * kx, y: lat * ky });
+      }
+    }
+    const end = pts[pts.length - 1];
+    dense.push({ lat: end.lat, lng: end.lng, x: end.lng * kx, y: end.lat * ky });
+
+    // 2. Direction of travel at each point
+    dense.forEach((p, i) => {
+      const m = Math.min(i, dense.length - 2);
+      const dx = dense[m + 1].x - dense[m].x, dy = dense[m + 1].y - dense[m].y;
+      const len = Math.hypot(dx, dy) || 1;
+      p.ux = dx / len; p.uy = dy / len;
+    });
+
+    // 3. For each point, look for EARLIER parts of the route on the same road
+    const CELL = 20, cells = new Map(), cls = new Array(dense.length).fill(0);
+    dense.forEach((p, i) => {
+      const cx = Math.floor(p.x / CELL), cy = Math.floor(p.y / CELL);
+      const near = [];
+      for (let ox = -1; ox <= 1; ox++) {
+        for (let oy = -1; oy <= 1; oy++) {
+          (cells.get((cx + ox) + ',' + (cy + oy)) || []).forEach(j => {
+            const q = dense[j];
+            if (i - j > 5 && Math.hypot(p.x - q.x, p.y - q.y) <= MATCH_M) {
+              const dot = p.ux * q.ux + p.uy * q.uy;
+              if (Math.abs(dot) > 0.7) near.push({ j, dot });   // roads side by side, not crossing
+            }
+          });
+        }
+      }
+      near.sort((a, b) => a.j - b.j);
+      let passes = 0, dot = 0, prev = -99;
+      near.forEach(n => { if (n.j - prev > 5) { passes++; dot = n.dot; } prev = n.j; });
+      cls[i] = passes === 0 ? 0 : passes >= 2 ? 3 : (dot > 0 ? 1 : 2);
+
+      const k = cx + ',' + cy;
+      if (!cells.has(k)) cells.set(k, []);
+      cells.get(k).push(i);
+    });
+
+    // 4. Redraw the line in coloured pieces (later passes are drawn on top)
+    map.eachLayer(l => { if (l instanceof L.Polyline) map.removeLayer(l); });
+    let start = 0;
+    for (let i = 1; i <= dense.length; i++) {
+      if (i === dense.length || cls[i] !== cls[start]) {
+        const stop = Math.min(i, dense.length - 1);
+        L.polyline(dense.slice(start, stop + 1).map(p => [p.lat, p.lng]),
+                   { color: REPEAT_COLOURS[cls[start]], weight: 6, opacity: 0.9 }).addTo(map);
+        start = i;
+      }
+    }
+  }
+
+  // Run it every time the track has loaded
+  const origLoadGpxTrack = loadGpxTrack;
+  loadGpxTrack = async function () {
+    await origLoadGpxTrack();
+    colourRepeats();
+  };
 </script>
 </body>
 </html>
