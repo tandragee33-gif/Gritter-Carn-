@@ -1039,9 +1039,11 @@
       if (err.code === 1) alert("Please allow Location access in your browser settings.");
     }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
   }
-      // ===== COLOUR REPEATED ROADS =====
+  // ===== COLOUR REPEATED ROADS + FADE DRIVEN SECTIONS =====
   const REPEAT_COLOURS = ['#ffcc00', '#ff7a00', '#00d0ff', '#ff4df0'];
-  const MATCH_M = 18;     // how close (metres) two passes must be to count as the same road
+  const DRIVEN_COLOUR = '#8a8a8a';   // colour of sections you've already driven
+  const MATCH_M = 18;                // how close (metres) two passes must be to count as the same road
+  let repeatRuns = [], repeatDenseCount = 0;
 
   function colourRepeats() {
     const pts = gpxCoordinates;
@@ -1095,24 +1097,56 @@
       cells.get(k).push(i);
     });
 
-    // 4. Redraw the line in coloured pieces (later passes are drawn on top)
+    // 4. Redraw the line in coloured pieces (later passes drawn on top)
     map.eachLayer(l => { if (l instanceof L.Polyline) map.removeLayer(l); });
+    repeatRuns = [];
+    repeatDenseCount = dense.length;
     let start = 0;
     for (let i = 1; i <= dense.length; i++) {
-      if (i === dense.length || cls[i] !== cls[start]) {
+      // a new piece starts when the colour changes, or every 10 points (about 200 m)
+      if (i === dense.length || cls[i] !== cls[start] || i - start >= 10) {
         const stop = Math.min(i, dense.length - 1);
-        L.polyline(dense.slice(start, stop + 1).map(p => [p.lat, p.lng]),
-                   { color: REPEAT_COLOURS[cls[start]], weight: 6, opacity: 0.9 }).addTo(map);
+        const colour = REPEAT_COLOURS[cls[start]];
+        const line = L.polyline(dense.slice(start, stop + 1).map(p => [p.lat, p.lng]),
+                                { color: colour, weight: 6, opacity: 0.9 }).addTo(map);
+        repeatRuns.push({ line, colour, to: stop, done: false });
         start = i;
       }
     }
+    fadeDriven();
   }
 
-  // Run it every time the track has loaded
+  // Greys out the pieces you have already driven
+  function fadeDriven() {
+    if (!repeatRuns.length || !map || !map.hasLayer(repeatRuns[0].line)) return;
+    const total = routeCARN1[routeCARN1.length - 1].totalDist;
+    const idx = (stepStartKm(currentIndex) / total) * (repeatDenseCount - 1);
+    let changed = false;
+    repeatRuns.forEach(r => {
+      const done = r.to <= idx;
+      if (done !== r.done) {
+        r.done = done;
+        changed = true;
+        r.line.setStyle(done ? { color: DRIVEN_COLOUR, opacity: 0.35, weight: 5 }
+                             : { color: r.colour, opacity: 0.9, weight: 6 });
+      }
+    });
+    // keep the sections still to drive on top, in route order
+    if (changed) repeatRuns.forEach(r => { if (!r.done) r.line.bringToFront(); });
+  }
+
+  // Run the colouring every time the track has loaded
   const origLoadGpxTrack = loadGpxTrack;
   loadGpxTrack = async function () {
     await origLoadGpxTrack();
     colourRepeats();
+  };
+
+  // Update the fade every time the step changes
+  const origUpdateCabDisplay = updateCabDisplay;
+  updateCabDisplay = function () {
+    origUpdateCabDisplay.apply(this, arguments);
+    fadeDriven();
   };
 </script>
 </body>
