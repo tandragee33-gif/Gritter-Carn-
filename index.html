@@ -758,7 +758,7 @@
 
   showSplash();
   // ===== SMOOTH HEADING-UP MAP (continuous, Google Maps style) =====
-  const MAP_BOTTOM_BIAS = 0.70;   // arrow sits 70% of the way down the map
+  const MAP_BOTTOM_BIAS = 0.50;   // arrow sits 70% of the way down the map
   const POSITION_LAG_S = 0.35;    // seconds the map takes to catch up with you (bigger = smoother, slower)
   const HEADING_LAG_S = 0.8;      // seconds the map takes to turn (bigger = calmer turning)
   const TURN_DEADZONE = 6;        // degrees: wobbles smaller than this are ignored
@@ -766,7 +766,7 @@
   const MAX_SHIFT = 80;           // pixels the map may drift before it is re-centred
   const DRIVE_ZOOM = 16;          // map zoom when GPS Drive starts (15 = wider, 17 = closer)
 
-  let headingUp = true, shownHeading = 0, headTarget = 0, headRef = null;
+  let headingUp = false, shownHeading = 0, headTarget = 0, headRef = null;
   let fix = null, disp = null, lastFrame = 0, realSetLatLng = null;
   const rotDiv = document.getElementById('map');
   const rotWrap = document.createElement('div');
@@ -888,7 +888,7 @@
 
   // Button to switch between heading-up and north-up
   const headBtn = document.createElement('button');
-  headBtn.textContent = '🧭 HEADING UP';
+    headBtn.textContent = '🧭 NORTH UP';
   headBtn.style.cssText = 'background:#ffcc00;color:#000;border:none;border-radius:6px;padding:8px 12px;font-weight:bold;';
   headBtn.onclick = () => {
     headingUp = !headingUp;
