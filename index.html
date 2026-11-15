@@ -650,7 +650,7 @@
     steps.forEach(s => routeCARN1.push(s));
 
     document.querySelector('header h1').innerText =
-      `Route route.name({steps[steps.length - 1].totalDist} km)`;
+      `Route ${route.name} (${steps[steps.length - 1].totalDist} km)`;
     const status = document.getElementById("gps-status");
     status.innerText = "READY";
     status.className = "status-badge status-online";
@@ -695,7 +695,7 @@
 
     function fillRoutes() {
       const d = catalogue.depots[depotSel.value];
-      routeSel.innerHTML = d.routes.map((r, i) => `<option value="i">{r.name}</option>`).join('');
+      routeSel.innerHTML = d.routes.map((r, i) => `<option value="${i}">${r.name}</option>`).join('');
     }
 
     btn.onclick = async () => {
@@ -705,7 +705,7 @@
           const res = await fetch('routes.json', { cache: 'no-cache' });
           if (!res.ok) throw new Error('Could not find routes.json');
           catalogue = await res.json();
-          depotSel.innerHTML = catalogue.depots.map((d, i) => `<option value="i">{route 1}</option>`).join('');
+          depotSel.innerHTML = catalogue.depots.map((d, i) => `<option value="${i}">${d.name}</option>`).join('');
           depotSel.onchange = fillRoutes;
           fillRoutes();
         }
