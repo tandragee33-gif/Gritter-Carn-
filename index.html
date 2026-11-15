@@ -727,6 +727,30 @@
 
   buildRoutePicker();
       // ===== SPLASH SCREEN =====
+      const GRITTER_SVG =
+    '<svg viewBox="0 40 750 290" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">' +
+    '<rect x="0" y="323" width="750" height="6" fill="#dfe6ea"/>' +
+    '<rect x="345" y="60" width="12" height="210" fill="#8a8a8a"/>' +
+    '<rect x="90" y="262" width="450" height="30" fill="#333"/>' +
+    '<polygon points="70,170 350,170 325,265 105,265" fill="#f2a900" stroke="#b87d00" stroke-width="3"/>' +
+    '<polygon points="78,170 342,170 318,146 102,146" fill="#d9d3c7" stroke="#a79f90" stroke-width="2"/>' +
+    '<g stroke="#c98700" stroke-width="3"><line x1="150" y1="170" x2="150" y2="265"/><line x1="230" y1="170" x2="230" y2="265"/></g>' +
+    '<g fill="#e8e2d6"><circle cx="75" cy="292" r="3"/><circle cx="58" cy="300" r="2.5"/><circle cx="42" cy="306" r="3"/><circle cx="28" cy="312" r="2"/><circle cx="62" cy="312" r="2"/><circle cx="46" cy="318" r="2.5"/><circle cx="14" cy="318" r="2"/></g>' +
+    '<path d="M360,270 V152 Q360,130 382,130 H470 Q490,130 500,152 L526,236 V270 Z" fill="#ffb000" stroke="#b87d00" stroke-width="3"/>' +
+    '<polygon points="385,150 465,150 494,224 385,224" fill="#bfe3f5" stroke="#6b8fa3" stroke-width="2"/>' +
+    '<line x1="420" y1="230" x2="420" y2="268" stroke="#c98700" stroke-width="3"/>' +
+    '<rect x="526" y="238" width="16" height="32" rx="3" fill="#444"/>' +
+    '<circle cx="520" cy="246" r="6" fill="#fff6c8"/>' +
+    '<circle cx="430" cy="118" r="28" fill="#ffb300" opacity="0.35"/>' +
+    '<rect x="410" y="116" width="40" height="14" rx="4" fill="#ff9800"/>' +
+    '<line x1="532" y1="258" x2="585" y2="262" stroke="#777" stroke-width="8"/>' +
+    '<polygon points="550,215 705,195 722,222 568,300" fill="#ffb000" stroke="#b87d00" stroke-width="3"/>' +
+    '<line x1="560" y1="228" x2="708" y2="209" stroke="#ffd77a" stroke-width="3"/>' +
+    '<line x1="568" y1="300" x2="722" y2="222" stroke="#8a8a8a" stroke-width="4"/>' +
+    '<g fill="#1a1a1a"><circle cx="170" cy="285" r="38"/><circle cx="252" cy="285" r="38"/><circle cx="470" cy="285" r="38"/></g>' +
+    '<g fill="#9a9a9a"><circle cx="170" cy="285" r="18"/><circle cx="252" cy="285" r="18"/><circle cx="470" cy="285" r="18"/></g>' +
+    '<g fill="#555"><circle cx="170" cy="285" r="6"/><circle cx="252" cy="285" r="6"/><circle cx="470" cy="285" r="6"/></g>' +
+    '</svg>';
   function showSplash() {
     const splash = document.createElement('div');
     splash.style.cssText = 'position:fixed;inset:0;z-index:10000;background:#121212;color:#fff;' +
@@ -736,7 +760,7 @@
       '<div style="font-size:26px;font-weight:bold;color:#ffcc00;letter-spacing:1px">GRITTER NAVIGATOR</div>' +
       '<img id="splash-img" src="gritter.jpg" alt="Gritter" ' +
         'style="max-width:100%;max-height:45vh;border-radius:12px;border:3px solid #ffcc00">' +
-      '<div id="splash-fallback" style="display:none;font-size:90px">🚛</div>' +
+      '<div id="splash-fallback" style="display:none;width:100%;max-width:420px">' + GRITTER_SVG + '</div>' +
       '<div style="color:#ccc">Hands-free route guide</div>' +
       '<button id="splash-go" style="font-size:20px;font-weight:bold;padding:18px 40px;' +
         'border:none;border-radius:10px;background:#ffaa00;color:#000">CONTINUE</button>';
